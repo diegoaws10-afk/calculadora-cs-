@@ -1,13 +1,13 @@
 import streamlit as st
+import os
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(
     page_title="Strati | Customer Success AI",
-    page_icon="🛡️",
     layout="wide"
 )
 
-# --- LÓGICA DO MODELO (Mantida Original) ---
+# --- LÓGICA DO MODELO (Mantida) ---
 class CustomerHealthModel:
     def __init__(self):
         self.regras_tier = {
@@ -67,7 +67,6 @@ class CustomerHealthModel:
                       (score_tecnico * regras['peso_tecnico']) + \
                       (score_nps * regras['peso_nps'])
         
-        # Definição de Status
         cor_status = "green"
         texto_status = "SAUDÁVEL"
         acao = "✅ Manter rotina de sucesso."
@@ -92,15 +91,20 @@ class CustomerHealthModel:
             "Cor": cor_status
         }
 
-# --- BARRA LATERAL (SIDEBAR) COM LOGO ---
+# --- SIDEBAR COM TRATAMENTO DE ERRO DE IMAGEM ---
 with st.sidebar:
-    # Tenta carregar o logo; se não achar, escreve o nome
-    try:
+    # Verifica qual arquivo existe (Maiúscula ou Minúscula)
+    if os.path.exists("Logo Strati.png"):
+        st.image("Logo Strati.png", use_column_width=True)
+    elif os.path.exists("strati_logo.png"):
         st.image("strati_logo.png", use_column_width=True)
-    except:
+    else:
+        # Se não achar nada, avisa qual é o erro
+        st.error("⚠️ Imagem não encontrada.")
+        st.caption("Verifique se o arquivo no GitHub se chama exatamente 'Logo Strati.png'")
         st.header("STRATI")
         
-    st.write("") # Espaço vazio
+    st.write("") 
     
     st.header("📋 Dados do Cliente")
     nome = st.text_input("Nome da Empresa", placeholder="Digite o nome...")
@@ -119,7 +123,7 @@ with st.sidebar:
     st.caption("© Strati - Full Service Provider")
 
 # --- ÁREA PRINCIPAL ---
-st.title("🛡️ Calculadora Customer Success")
+st.title("Calculadora Customer Success") # Removido o escudo
 st.markdown(f"Diagnóstico de Saúde do Cliente **{nome if nome else ''}**")
 
 col_form1, col_form2 = st.columns(2)
@@ -141,7 +145,6 @@ with col_form2:
         st.info("O cálculo do NPS é ponderado automaticamente conforme o Tier.")
         
     st.write("")
-    # Botão padrão do Streamlit (Primary)
     calcular = st.button("CALCULAR HEALTH SCORE", use_container_width=True, type="primary")
 
 # --- RESULTADO ---
@@ -160,7 +163,6 @@ if calcular:
     c1, c2 = st.columns([1, 2])
     
     with c1:
-        # Usa cores nativas do Streamlit (normal vs inverse) para destaque
         st.metric("Health Score Final", f"{res['Score']} / 100", delta=res['Status'], delta_color="inverse")
         
     with c2:
