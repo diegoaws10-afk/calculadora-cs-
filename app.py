@@ -1,9 +1,46 @@
 import streamlit as st
 
-# --- CONFIGURAÇÃO DA PÁGINA ---
-st.set_page_config(page_title="Calculadora CS AI", page_icon="🚀")
+# --- CONFIGURAÇÃO DA PÁGINA E TEMA VISUAL ---
+st.set_page_config(
+    page_title="Strati | Customer Success AI", 
+    page_icon="🛡️",
+    layout="wide"
+)
 
-# --- LÓGICA DO MODELO ---
+# Injeção de CSS para identidade visual da Strati
+st.markdown("""
+    <style>
+    /* Cor Principal (Botões e Sliders) - Azul Strati */
+    div.stButton > button:first-child {
+        background-color: #003366; 
+        color: white;
+        border-radius: 8px;
+        border: none;
+        font-weight: bold;
+    }
+    div.stButton > button:hover {
+        background-color: #004080;
+        color: white;
+    }
+    
+    /* Cor dos Sliders */
+    div.stSlider > div > div > div > div {
+        background-color: #003366;
+    }
+    
+    /* Cor do Sidebar (Fundo Levemente Azulado) */
+    section[data-testid="stSidebar"] {
+        background-color: #f0f4f8;
+    }
+    
+    /* Títulos em Azul Strati */
+    h1, h2, h3 {
+        color: #003366 !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# --- LÓGICA DO MODELO (Mesma Lógica, Visual Novo) ---
 class CustomerHealthModel:
     def __init__(self):
         self.regras_tier = {
@@ -63,15 +100,13 @@ class CustomerHealthModel:
                       (score_tecnico * regras['peso_tecnico']) + \
                       (score_nps * regras['peso_nps'])
         
-        # Cores para Web
-        cor_borda = "#28a745"
-        bg_cor = "#d4edda"
+        # Cores e Status
+        cor_status = "green"
         texto_status = "SAUDÁVEL"
         acao = "✅ Manter rotina de sucesso."
 
         if final_score < 60:
-            cor_borda = "#dc3545"
-            bg_cor = "#f8d7da"
+            cor_status = "red"
             texto_status = "CRÍTICO"
             motivos = []
             if dados['sla_realizado'] < 98: motivos.append("Quebra de SLA")
@@ -79,8 +114,7 @@ class CustomerHealthModel:
             if dados['qbr_entregue'] == 'Não' and tier == 'Ouro': motivos.append("QBR Pendente")
             acao = f"🚨 **ACIONAR PLANO DE RECUPERAÇÃO**\n\nFoco: {', '.join(motivos)}."
         elif final_score < 75:
-            cor_borda = "#ffc107"
-            bg_cor = "#fff3cd"
+            cor_status = "orange"
             texto_status = "ATENÇÃO"
             acao = "⚠️ Agendar call de alinhamento."
 
@@ -88,38 +122,54 @@ class CustomerHealthModel:
             "Score": round(final_score, 1),
             "Status": texto_status, "Acao": acao,
             "Tec": int(score_tecnico), "Int": int(score_interacao), "NPS": int(score_nps),
-            "Color": cor_borda
+            "Cor": cor_status
         }
 
-# --- INTERFACE VISUAL (SIDEBAR E MAIN) ---
-st.title("🚀 Calculadora Customer Success AI")
-st.markdown("Preencha os dados abaixo para obter o diagnóstico preditivo.")
-
+# --- SIDEBAR (LOGO E INPUTS) ---
 with st.sidebar:
-    st.header("📋 Dados Cadastrais")
-    nome = st.text_input("Nome do Cliente", placeholder="Ex: Empresa X")
-    tier = st.selectbox("Tier / Classificação", ["Ouro", "Prata", "Bronze"])
+    # Tenta carregar o logo se existir, senão mostra texto
+    try:
+        st.image("strati_logo.png", width=180) 
+    except:
+        st.title("STRATI") # Fallback se não tiver imagem
+        
+    st.markdown("### Dados do Cliente")
+    nome = st.text_input("Nome da Empresa", placeholder="Digite o nome...")
+    tier = st.selectbox("Classificação (Tier)", ["Ouro", "Prata", "Bronze"])
     
     st.divider()
-    st.header("⚙️ Métricas Técnicas")
+    st.markdown("### ⚙️ SLA e Chamados")
     sla = st.slider("SLA Realizado (%)", 80.0, 100.0, 98.0, step=0.1)
     col1, col2 = st.columns(2)
-    chamados_in = col1.number_input("Chamados Abertos", min_value=0, value=10)
-    chamados_out = col2.number_input("Chamados Fechados", min_value=0, value=10)
+    chamados_in = col1.number_input("Abertos", min_value=0, value=10)
+    chamados_out = col2.number_input("Fechados", min_value=0, value=10)
+    
+    st.markdown("---")
+    st.markdown("Criado por Especialista CS Strati")
+
+# --- ÁREA PRINCIPAL ---
+st.title("🛡️ Calculadora Customer Success")
+st.markdown(f"Diagnóstico de Saúde do Cliente **{nome if nome else ''}**")
 
 col_form1, col_form2 = st.columns(2)
 
 with col_form1:
-    st.subheader("🤝 Relacionamento")
-    visitas = st.slider("Visitas Presenciais", 0, 5, 1)
-    online = st.slider("Reuniões Online", 0, 10, 2)
-    book = st.selectbox("Status do Book", ["Apresentado", "Enviado", "Não realizado"])
-    qbr = st.radio("QBR Entregue?", ["Sim", "Não"], horizontal=True)
+    st.markdown("#### 🤝 Relacionamento")
+    with st.container(border=True):
+        visitas = st.slider("Visitas Presenciais", 0, 5, 1)
+        online = st.slider("Reuniões Online / Calls", 0, 10, 2)
+        book = st.selectbox("Status do Book de Serviços", ["Apresentado", "Enviado", "Não realizado"])
+        qbr = st.radio("QBR Entregue no Trimestre?", ["Sim", "Não"], horizontal=True)
 
 with col_form2:
-    st.subheader("❤️ Sentimento")
-    nps = st.slider("NPS (0 a 10)", 0, 10, 9)
-    st.markdown("<br><br>", unsafe_allow_html=True) # Espaço
+    st.markdown("#### ❤️ Sentimento (NPS)")
+    with st.container(border=True):
+        st.write("") # Espaçamento
+        nps = st.slider("Nota NPS (0 a 10)", 0, 10, 9)
+        st.write("")
+        st.info("O NPS tem peso calibrado conforme o Tier selecionado.")
+        
+    st.write("")
     calcular = st.button("CALCULAR HEALTH SCORE", use_container_width=True, type="primary")
 
 # --- RESULTADO ---
@@ -132,22 +182,24 @@ if calcular:
     }
     res = modelo.analisar_cliente(dados)
     
-    st.divider()
+    st.markdown("---")
     
-    # Cabeçalho do Card
-    st.markdown(f"### Resultado: {nome.upper() if nome else 'CLIENTE'}")
+    # Layout de Resultado Strati
+    c1, c2 = st.columns([1, 2])
     
-    # Métricas Principais
-    c1, c2, c3 = st.columns([1, 2, 1])
     with c1:
-        st.metric("Tier", tier)
+        st.metric("Health Score Final", f"{res['Score']} / 100", delta=res['Status'], delta_color="inverse")
+        
     with c2:
-        st.metric("Health Score", f"{res['Score']} / 100", delta=res['Status'], delta_color="normal" if res['Score'] > 75 else "inverse")
-    
-    # Detalhes
-    st.info(f"**Recomendação:** {res['Acao']}")
-    
+        if res['Cor'] == 'green':
+            st.success(f"**Recomendação:** {res['Acao']}")
+        elif res['Cor'] == 'orange':
+            st.warning(f"**Recomendação:** {res['Acao']}")
+        else:
+            st.error(f"**Recomendação:** {res['Acao']}")
+
+    # Cards de Detalhes
     d1, d2, d3 = st.columns(3)
-    d1.metric("🔧 Técnico", f"{res['Tec']}%")
-    d2.metric("🤝 Interação", f"{res['Int']}%")
-    d3.metric("❤️ NPS", res['NPS'])
+    d1.metric("🔧 Score Técnico", f"{res['Tec']}%")
+    d2.metric("🤝 Score Interação", f"{res['Int']}%")
+    d3.metric("❤️ Score NPS", res['NPS'])
