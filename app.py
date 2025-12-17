@@ -124,7 +124,7 @@ with st.sidebar:
 
 # --- ÁREA PRINCIPAL ---
 st.title("Calculadora Customer Success") # Removido o escudo
-st.markdown(f"Diagnóstico de Saúde do Cliente **{nome if nome else ''}**")
+st.markdown(f"Customer Health Diagnosis **{nome if nome else ''}**")
 
 col_form1, col_form2 = st.columns(2)
 
@@ -178,4 +178,5 @@ if calcular:
     d1.metric("🔧 Técnico", f"{res['Tec']}%")
     d2.metric("🤝 Interação", f"{res['Int']}%")
     d3.metric("❤️ NPS", res['NPS'])
+
 
