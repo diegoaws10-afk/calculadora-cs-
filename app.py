@@ -101,7 +101,7 @@ with st.sidebar:
     else:
         # Se não achar nada, avisa qual é o erro
         st.error("⚠️ Imagem não encontrada.")
-        st.caption("Verifique se o arquivo no GitHub se chama exatamente 'Logo Strati.png'")
+        st.caption("Verifique se o arquivo no GitHub se chama exatamente 'strati_logo.png'")
         st.header("STRATI")
         
     st.write("") 
@@ -178,3 +178,4 @@ if calcular:
     d1.metric("🔧 Técnico", f"{res['Tec']}%")
     d2.metric("🤝 Interação", f"{res['Int']}%")
     d3.metric("❤️ NPS", res['NPS'])
+
