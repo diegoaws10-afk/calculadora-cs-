@@ -48,9 +48,6 @@ if not check_authentication():
     st.stop()
 
 # ==================================================
-# 💾 BANCO DE DADOS
-# ==================================================
-# ==================================================
 # 💾 BANCO DE DADOS (CORRIGIDO)
 # ==================================================
 def salvar_no_banco(dados):
@@ -67,7 +64,7 @@ def salvar_no_banco(dados):
         df_atualizado = pd.concat([df_atual, nova_linha], ignore_index=True)
         
         # Atualiza a planilha
-        conn.update(worksheet="Página1", data=df_atualizado)
+        conn.update(worksheet="Sheet1", data=df_atualizado)
         return True
         
     except Exception as e:
@@ -196,4 +193,5 @@ if st.button("CALCULAR E SALVAR", type="primary", use_container_width=True):
         with st.spinner("Salvando..."):
             if salvar_no_banco(dados_db):
                 st.toast("Salvo no Google Sheets!", icon="✅")
+
 
