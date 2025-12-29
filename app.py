@@ -27,8 +27,10 @@ def check_authentication():
             submit = st.form_submit_button("Entrar")
             
             if submit:
+                # Verifica se usuário existe e senha confere
                 if username in st.secrets["passwords"] and password == st.secrets["passwords"][username]:
                     try:
+                        # Valida o token MFA
                         totp = pyotp.TOTP(st.secrets["mfa"]["secret_key"])
                         if totp.verify(token_mfa):
                             st.session_state["authenticated"] = True
@@ -48,54 +50,71 @@ if not check_authentication():
     st.stop()
 
 # ==================================================
-# 💾 BANCO DE DADOS (VERSÃO FINAL)
+# 💾 BANCO DE DADOS
 # ==================================================
 def salvar_no_banco(dados):
     try:
         conn = st.connection("gsheets", type=GSheetsConnection)
         
-        # Lê a aba 'Página1'
+        # Lê a aba 'Página1' (Se sua planilha usa 'Sheet1', altere aqui)
         df_atual = conn.read(worksheet="Página1", ttl=0)
         
-        # Cria e adiciona a nova linha
+        # Cria a nova linha
         nova_linha = pd.DataFrame([dados])
-        df_atualizado = pd.concat([df_atual, nova_linha], ignore_index=True)
         
-        # Atualiza
+        # Concatena e salva
+        df_atualizado = pd.concat([df_atual, nova_linha], ignore_index=True)
         conn.update(worksheet="Página1", data=df_atualizado)
         return True
         
     except Exception as e:
-        # Ignora o falso erro 200 (Sucesso)
+        # Ignora falso erro de sucesso (200)
         if "200" in str(e) or "Response" in str(e):
             return True
         else:
-            # Mostra erro real se houver (como permissão negada)
             st.error(f"Erro ao salvar: {str(e)}")
             return False
-            
+
 # ==================================================
-# 🧠 LÓGICA CS
+# 🧠 LÓGICA CS (HÍBRIDA: FASE + TIER)
 # ==================================================
 class CustomerHealthModel:
     def __init__(self):
-        self.regras_cohort = {
+        # Pesos definidos pela FASE (Momento do cliente)
+        self.regras_fase = {
             'Onboarding (0-6m)': {'peso_interacao': 0.60, 'peso_tecnico': 0.20, 'peso_nps': 0.20, 'meta_visitas': 2},
             'Adoção (6-24m)':    {'peso_interacao': 0.30, 'peso_tecnico': 0.40, 'peso_nps': 0.30, 'meta_visitas': 1},
             'Retenção (+2 anos)':{'peso_interacao': 0.20, 'peso_tecnico': 0.50, 'peso_nps': 0.30, 'meta_visitas': 0.5}
         }
-        self.sla_target = 98.0
+        
+        # SLA Alvo definido pelo TIER (Valor do cliente)
+        # Clientes Ouro exigem SLA mais rigoroso para dar nota máxima
+        self.sla_targets = {
+            'Ouro': 99.0,
+            'Prata': 98.0,
+            'Bronze': 95.0
+        }
 
     def calcular(self, dados):
-        regras = self.regras_cohort[dados['cohort']]
+        # 1. Busca regras baseadas na FASE
+        regras = self.regras_fase[dados['fase']]
         
-        # Técnico
+        # 2. Busca alvo de SLA baseado no TIER
+        sla_alvo = self.sla_targets.get(dados['tier'], 98.0)
+        
+        # --- Cálculo Técnico ---
         ratio = 1.0 if dados['criados'] == 0 else dados['encerrados'] / dados['criados']
         score_backlog = min(ratio, 1.0) * 100
-        score_sla = 100 if dados['sla'] >= self.sla_target else ((dados['sla'] / self.sla_target) ** 5) * 100
+        
+        if dados['sla'] >= sla_alvo:
+            score_sla = 100
+        else:
+            # Penalidade exponencial se ficar abaixo da meta do Tier
+            score_sla = ((dados['sla'] / sla_alvo) ** 5) * 100
+        
         score_tecnico = (score_sla * 0.70) + (score_backlog * 0.30)
         
-        # Interação
+        # --- Cálculo Interação ---
         meta = regras['meta_visitas']
         if meta > 0:
             visitas_score = min((dados['visitas']/meta)*100, 100.0)
@@ -106,7 +125,7 @@ class CustomerHealthModel:
         qbr_pts = 100 if dados['qbr']=='Sim' else 0
         score_interacao = (visitas_score*0.5) + ((book_pts + qbr_pts)/2*0.5) + min(dados['online']*2, 10)
         
-        # Final
+        # --- Final ---
         score_nps = dados['nps'] * 10
         final = (score_interacao * regras['peso_interacao']) + \
                 (score_tecnico * regras['peso_tecnico']) + \
@@ -116,22 +135,28 @@ class CustomerHealthModel:
         if final < 60: status, cor = "CRÍTICO", "red"
         elif final < 75: status, cor = "ATENÇÃO", "orange"
             
-        return {"Score": round(final, 1), "Status": status, "Cor": cor, "Tec": int(score_tecnico), "Int": int(score_interacao), "NPS": int(score_nps)}
+        return {
+            "Score": round(final, 1), 
+            "Status": status, 
+            "Cor": cor, 
+            "Tec": int(score_tecnico), 
+            "Int": int(score_interacao), 
+            "NPS": int(score_nps),
+            "Meta_SLA": sla_alvo
+        }
 
 # ==================================================
 # 🖥️ INTERFACE
 # ==================================================
 with st.sidebar:
-    # Tenta carregar o logo de várias formas
+    # Tenta carregar o logo
     logo_carregado = False
     possible_names = ["strati_logo.png", "Logo Strati.png", "logo.png"]
-    
     for nome_arquivo in possible_names:
         if os.path.exists(nome_arquivo):
             st.image(nome_arquivo, use_column_width=True)
             logo_carregado = True
             break
-            
     if not logo_carregado:
         st.header("STRATI")
         
@@ -141,30 +166,40 @@ with st.sidebar:
         st.rerun()
         
     st.divider()
-    nome = st.text_input("Nome Cliente")
-    # Mantendo o label "Fase" que você gostou
-    cohort = st.selectbox("Fase do Cliente", ['Onboarding (0-6m)', 'Adoção (6-24m)', 'Retenção (+2 anos)'])
+    
+    # --- NOVOS INPUTS DE CLASSIFICAÇÃO ---
+    st.markdown("### 1. Perfil do Cliente")
+    nome = st.text_input("Nome da Empresa")
+    
+    col_tier, col_fase = st.columns(2)
+    with col_tier:
+        tier = st.selectbox("Tier", ["Ouro", "Prata", "Bronze"])
+    with col_fase:
+        fase = st.selectbox("Fase", ['Onboarding (0-6m)', 'Adoção (6-24m)', 'Retenção (+2 anos)'])
     
     st.divider()
-    sla = st.slider("SLA %", 80.0, 100.0, 98.0)
-    c_in = st.number_input("Chamados Criados", value=5)
-    c_out = st.number_input("Chamados Encerrados", value=5)
+    
+    st.markdown("### 2. Métricas")
+    sla = st.slider("SLA Realizado (%)", 80.0, 100.0, 98.0)
+    c_in = st.number_input("Chamados Abertos", value=5)
+    c_out = st.number_input("Chamados Fechados", value=5)
 
-st.title("🛡️ Calculadora CS + Database")
+st.title("🛡️ Calculadora CS Strati")
+st.markdown(f"Análise: **{nome if nome else 'Novo Cliente'}** | Perfil: **{tier}** - **{fase}**")
 
 col1, col2 = st.columns(2)
 with col1:
     with st.container(border=True):
-        st.subheader("Relacionamento")
-        visitas = st.slider("Visitas", 0, 5, 1)
+        st.subheader("🤝 Relacionamento")
+        visitas = st.slider("Visitas Presenciais", 0, 5, 1)
         online = st.slider("Calls Online", 0, 10, 2)
-        book = st.selectbox("Book", ["Apresentado", "Enviado", "Não realizado"])
-        qbr = st.radio("QBR?", ["Sim", "Não"], horizontal=True)
+        book = st.selectbox("Book de Serviços", ["Apresentado", "Enviado", "Não realizado"])
+        qbr = st.radio("QBR Trimestral?", ["Sim", "Não"], horizontal=True)
 
 with col2:
     with st.container(border=True):
-        st.subheader("NPS")
-        nps = st.slider("Nota", 0, 10, 9)
+        st.subheader("❤️ Satisfação")
+        nps = st.slider("NPS (0-10)", 0, 10, 9)
 
 st.write("")
 if st.button("CALCULAR E SALVAR", type="primary", use_container_width=True):
@@ -172,27 +207,38 @@ if st.button("CALCULAR E SALVAR", type="primary", use_container_width=True):
         st.warning("Preencha o nome do cliente para salvar.")
     else:
         modelo = CustomerHealthModel()
-        inputs = {'cohort': cohort, 'nps': nps, 'criados': c_in, 'encerrados': c_out, 'sla': sla, 'visitas': visitas, 'book': book, 'qbr': qbr, 'online': online}
+        inputs = {
+            'tier': tier, 'fase': fase, 'nps': nps, 
+            'criados': c_in, 'encerrados': c_out, 'sla': sla, 
+            'visitas': visitas, 'book': book, 'qbr': qbr, 'online': online
+        }
         res = modelo.calcular(inputs)
         
         st.divider()
-        c1, c2 = st.columns([1,2])
-        c1.metric("Health Score", res['Score'], delta=res['Status'], delta_color="inverse")
-        if res['Cor'] == 'red': st.error(res['Status'])
-        elif res['Cor'] == 'orange': st.warning(res['Status'])
-        else: st.success(res['Status'])
         
-        # Salvar
+        # Resultado Visual
+        c1, c2 = st.columns([1,2])
+        c1.metric("Health Score Final", res['Score'], delta=res['Status'], delta_color="inverse")
+        
+        msg_result = f"**Status:** {res['Status']}"
+        if res['Cor'] == 'red': st.error(msg_result)
+        elif res['Cor'] == 'orange': st.warning(msg_result)
+        else: st.success(msg_result)
+        
+        # Dados para o Google Sheets (Incluindo Tier e Fase)
         dados_db = {
             "Data": datetime.now().strftime("%d/%m/%Y %H:%M"),
-            "Cliente": nome, "Fase": cohort, "Score": res['Score'], "Status": res['Status'],
-            "Técnico": res['Tec'], "Interação": res['Int'], "NPS": res['NPS'], "Responsável": st.session_state['user_logado']
+            "Cliente": nome,
+            "Tier": tier,  # Nova Coluna
+            "Fase": fase,
+            "Score": res['Score'],
+            "Status": res['Status'],
+            "Técnico": res['Tec'],
+            "Interação": res['Int'],
+            "NPS": res['NPS'],
+            "Responsável": st.session_state['user_logado']
         }
         
         with st.spinner("Salvando..."):
             if salvar_no_banco(dados_db):
                 st.toast("Salvo no Google Sheets!", icon="✅")
-
-
-
-
