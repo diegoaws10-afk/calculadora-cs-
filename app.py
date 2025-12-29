@@ -50,31 +50,26 @@ if not check_authentication():
 # ==================================================
 # 💾 BANCO DE DADOS (CORRIGIDO)
 # ==================================================
+# ==================================================
+# 💾 BANCO DE DADOS (MODO DEBUG)
+# ==================================================
 def salvar_no_banco(dados):
-    try:
-        conn = st.connection("gsheets", type=GSheetsConnection)
-        
-        # Tenta ler a aba. Se sua planilha estiver em inglês, mude "Página1" para "Sheet1"
-        df_atual = conn.read(worksheet="Página1", ttl=0)
-        
-        # Cria a nova linha
-        nova_linha = pd.DataFrame([dados])
-        
-        # Junta o antigo com o novo
-        df_atualizado = pd.concat([df_atual, nova_linha], ignore_index=True)
-        
-        # Atualiza a planilha
-        conn.update(worksheet="Sheet1", data=df_atualizado)
-        return True
-        
-    except Exception as e:
-        # AQUI ESTÁ A CORREÇÃO:
-        # Se o erro for apenas o código 200 (Sucesso), nós ignoramos e dizemos que deu certo.
-        if "200" in str(e) or "Response" in str(e):
-            return True
-        else:
-            st.error(f"Erro detalhado ao salvar: {str(e)}")
-            return False
+    # Sem try/except para mostrar o erro real na cara do gol
+    conn = st.connection("gsheets", type=GSheetsConnection)
+    
+    st.write("1. Tentando ler a planilha 'Página1'...")
+    # Ajuste o nome abaixo se sua aba chamar "Sheet1"
+    df_atual = conn.read(worksheet="Página1", ttl=0) 
+    st.write(f"   -> Leitura OK! Linhas encontradas: {len(df_atual)}")
+    
+    nova_linha = pd.DataFrame([dados])
+    df_atualizado = pd.concat([df_atual, nova_linha], ignore_index=True)
+    
+    st.write("2. Tentando escrever a nova linha...")
+    conn.update(worksheet="Página1", data=df_atualizado)
+    st.write("   -> Escrita finalizada (Se chegou aqui e não salvou, é permissão ou delay).")
+    
+    return True
 # ==================================================
 # 🧠 LÓGICA CS
 # ==================================================
@@ -193,5 +188,6 @@ if st.button("CALCULAR E SALVAR", type="primary", use_container_width=True):
         with st.spinner("Salvando..."):
             if salvar_no_banco(dados_db):
                 st.toast("Salvo no Google Sheets!", icon="✅")
+
 
 
