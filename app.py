@@ -10,7 +10,7 @@ import os
 st.set_page_config(page_title="Strati | CS Segura", layout="wide", page_icon="🛡️")
 
 # ==================================================
-# 🔐 SEGURANÇA (MFA)
+# 🔐 SEGURANÇA (MFA CORRIGIDO)
 # ==================================================
 def check_authentication():
     if st.session_state.get("authenticated", False):
@@ -23,30 +23,30 @@ def check_authentication():
         with st.form("login_form"):
             username = st.text_input("Usuário")
             password = st.text_input("Senha", type="password")
-            token_mfa = st.text_input("Código Authenticator (6 dígitos)", max_chars=6)
+            # Removemos o max_chars para evitar travar quem cola o código
+            token_mfa = st.text_input("Código Authenticator (6 dígitos)") 
             submit = st.form_submit_button("Entrar")
             
             if submit:
+                # 1. Verifica Usuário e Senha
                 if username in st.secrets["passwords"] and password == st.secrets["passwords"][username]:
-                    try:
-                        totp = pyotp.TOTP(st.secrets["mfa"]["secret_key"])
-                        if totp.verify(token_mfa):
-                            st.session_state["authenticated"] = True
-                            st.session_state["user_logado"] = username
-                            st.success("Login realizado!")
-                            time.sleep(1)
-                            st.rerun()
-                        else:
-                            st.error("❌ Código MFA Inválido.")
-                    except:
-                        st.error("❌ Erro na configuração do MFA. Verifique os Secrets.")
+                    
+                    # 2. Verifica o MFA (Sem o bloco try/except genérico)
+                    # O .replace(" ", "") garante que funcione mesmo se digitar com espaço "123 456"
+                    secret_key = st.secrets["mfa"]["secret_key"]
+                    totp = pyotp.TOTP(secret_key)
+                    
+                    if totp.verify(token_mfa.replace(" ", "")):
+                        st.session_state["authenticated"] = True
+                        st.session_state["user_logado"] = username
+                        st.success("Login realizado!")
+                        time.sleep(1)
+                        st.rerun()
+                    else:
+                        st.error("❌ Código MFA Inválido ou Expirado.")
                 else:
                     st.error("❌ Usuário ou Senha incorretos.")
     return False
-
-if not check_authentication():
-    st.stop()
-
 # ==================================================
 # 💾 BANCO DE DADOS
 # ==================================================
@@ -245,3 +245,4 @@ if st.button("CALCULAR E SALVAR", type="primary", use_container_width=True):
         with st.spinner("Salvando..."):
             if salvar_no_banco(dados_db):
                 st.toast("Salvo no Google Sheets!", icon="✅")
+
