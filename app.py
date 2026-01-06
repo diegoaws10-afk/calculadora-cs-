@@ -192,3 +192,39 @@ with col2:
 st.write("")
 if st.button("CALCULAR SAÚDE & AÇÕES", type="primary", use_container_width=True):
     if not nome:
+        st.warning("Preencha o nome do cliente.")
+    else:
+        modelo = CustomerHealthModel()
+        inputs = {'tier': tier, 'fase': fase, 'nps': nps_valor, 'criados': c_in, 'encerrados': c_out, 'sla': sla, 'visitas': visitas, 'book': book, 'qbr': qbr, 'online': online}
+        res = modelo.calcular(inputs)
+        
+        st.divider()
+        c1, c2 = st.columns([1,2])
+        c1.metric("Health Score", res['Score'], delta=res['Status'], delta_color="inverse")
+        
+        with c2:
+            st.subheader("📝 Plano de Ação Sugerido")
+            
+            # Monta o texto das ações
+            texto_acoes = ""
+            for acao in res['Acoes']:
+                texto_acoes += f"{acao}\n\n"
+            
+            # Exibe o bloco de alerta
+            if res['Cor'] == 'green':
+                st.success(texto_acoes, icon="✅")
+            elif res['Cor'] == 'orange':
+                st.warning(texto_acoes, icon="⚠️")
+            else:
+                st.error(texto_acoes, icon="🚩")
+
+        nps_banco = res['NPS'] if res['NPS'] != "N/A" else ""
+        dados_db = {
+            "Data": datetime.now().strftime("%d/%m/%Y %H:%M"), "Cliente": nome, "Tier": tier, "Fase": fase,
+            "Score": res['Score'], "Status": res['Status'], "Técnico": res['Tec'], "Interação": res['Int'],
+            "NPS": nps_banco, "Responsável": st.session_state.get('user_logado', 'Admin')
+        }
+        
+        with st.spinner("Registrando..."):
+            salvar_no_banco(dados_db)
+            st.toast("Sucesso! Dados salvos.", icon="✅")
