@@ -10,10 +10,9 @@ import os
 st.set_page_config(page_title="Strati | CS Segura", layout="wide", page_icon="🛡️")
 
 # ==================================================
-# 🔐 SEGURANÇA (MFA SIMPLIFICADO)
+# 🔐 SEGURANÇA
 # ==================================================
 def check_authentication():
-    # Se já estiver autenticado, libera o acesso
     if st.session_state.get("authenticated", False):
         return True
 
@@ -24,22 +23,17 @@ def check_authentication():
         with st.form("login_form"):
             username = st.text_input("Usuário")
             password = st.text_input("Senha", type="password")
-            token_mfa = st.text_input("Código Authenticator (6 dígitos)") 
+            token_mfa = st.text_input("Código Authenticator") 
             submit = st.form_submit_button("Entrar")
             
             if submit:
-                # 1. Verifica Usuário e Senha nos Secrets
                 if username in st.secrets["passwords"] and password == st.secrets["passwords"][username]:
-                    
-                    # 2. Verifica MFA (Código do Google Authenticator)
-                    # .replace garante que espaços (123 456) não quebrem a verificação
                     secret_key = st.secrets["mfa"]["secret_key"]
                     totp = pyotp.TOTP(secret_key)
-                    
                     if totp.verify(token_mfa.replace(" ", "")):
                         st.session_state["authenticated"] = True
                         st.session_state["user_logado"] = username
-                        st.success("Login realizado com sucesso!")
+                        st.success("Login realizado!")
                         time.sleep(0.5)
                         st.rerun()
                     else:
@@ -48,7 +42,6 @@ def check_authentication():
                     st.error("❌ Usuário ou Senha incorretos.")
     return False
 
-# Bloqueia o app se não estiver logado
 if not check_authentication():
     st.stop()
 
@@ -64,14 +57,11 @@ def salvar_no_banco(dados):
         conn.update(worksheet="Página1", data=df_atualizado)
         return True
     except Exception as e:
-        if "200" in str(e) or "Response" in str(e):
-            return True
-        else:
-            st.error(f"Erro ao salvar: {str(e)}")
-            return False
+        if "200" in str(e) or "Response" in str(e): return True
+        else: st.error(f"Erro ao salvar: {str(e)}"); return False
 
 # ==================================================
-# 🧠 LÓGICA CS (DINÂMICA)
+# 🧠 LÓGICA CS + PLAYBOOKS
 # ==================================================
 class CustomerHealthModel:
     def __init__(self):
@@ -82,17 +72,49 @@ class CustomerHealthModel:
         }
         self.sla_targets = {'Ouro': 99.0, 'Prata': 98.0, 'Bronze': 95.0}
 
+    def gerar_playbook(self, status, score_tec, score_int, score_nps):
+        """Gera ações recomendadas baseadas nas dores específicas"""
+        acoes = []
+        
+        # 1. Playbook de Risco (Crítico/Atenção)
+        if status in ["CRÍTICO", "ATENÇÃO"]:
+            acoes.append("⚠️ **Ação Imediata:** Registrar risco no CRM/Planilha.")
+            
+            # Diagnóstico Técnico
+            if score_tec < 70:
+                acoes.append("🔧 **Técnico:** Agendar War Room com suporte para revisar chamados abertos.")
+                acoes.append("🔧 **Técnico:** Enviar relatório de SLA e plano de correção.")
+            
+            # Diagnóstico Relacionamento
+            if score_int < 60:
+                acoes.append("🤝 **Relacionamento:** Agendar visita ou call executiva urgente.")
+                acoes.append("🤝 **Relacionamento:** Reenviar/Reapresentar o Book de Serviços.")
+            
+            # Diagnóstico Satisfação
+            if score_nps != "N/A" and score_nps < 70: # NPS abaixo de 7 (Score 70)
+                acoes.append("❤️ **NPS:** Ligar para o decisor para entender a nota (Entrevista de profundidade).")
+
+        # 2. Playbook de Oportunidade (Saudável)
+        else:
+            acoes.append("✅ **Manutenção:** Elogiar o time do cliente na próxima call.")
+            if score_nps != "N/A" and score_nps >= 90:
+                acoes.append("⭐ **Advocacia:** Solicitar indicação (Referral) ou depoimento em vídeo.")
+            if score_int > 90:
+                acoes.append("💰 **Expansão:** Avaliar oportunidade de Upsell/Cross-sell.")
+
+        return acoes
+
     def calcular(self, dados):
         regras = self.regras_fase[dados['fase']]
         sla_alvo = self.sla_targets.get(dados['tier'], 98.0)
         
-        # --- Técnico ---
+        # Cálculo Técnico
         ratio = 1.0 if dados['criados'] == 0 else dados['encerrados'] / dados['criados']
         score_backlog = min(ratio, 1.0) * 100
         score_sla = 100 if dados['sla'] >= sla_alvo else ((dados['sla'] / sla_alvo) ** 5) * 100
         score_tecnico = (score_sla * 0.70) + (score_backlog * 0.30)
         
-        # --- Interação ---
+        # Cálculo Interação
         meta = regras['meta_visitas']
         visitas_score = 100 if meta == 0 else min((dados['visitas']/meta)*100, 100.0)
         book_pts = 100 if dados['book']=='Apresentado' else (50 if dados['book']=='Enviado' else 0)
@@ -100,7 +122,7 @@ class CustomerHealthModel:
         score_interacao = (visitas_score*0.5) + ((book_pts + qbr_pts)/2*0.5) + min(dados['online']*2, 10)
         score_interacao = min(score_interacao, 100.0)
 
-        # --- Final (Com ou Sem NPS) ---
+        # Cálculo Final
         peso_nps = regras['peso_nps']
         peso_tec = regras['peso_tecnico']
         peso_int = regras['peso_interacao']
@@ -118,18 +140,20 @@ class CustomerHealthModel:
         status, cor = "SAUDÁVEL", "green"
         if final < 60: status, cor = "CRÍTICO", "red"
         elif final < 75: status, cor = "ATENÇÃO", "orange"
+        
+        # Gera o Playbook
+        playbook = self.gerar_playbook(status, score_tecnico, score_interacao, msg_nps)
             
         return {
             "Score": round(final, 1), "Status": status, "Cor": cor, 
             "Tec": int(score_tecnico), "Int": int(score_interacao), 
-            "NPS": msg_nps, "Meta_SLA": sla_alvo
+            "NPS": msg_nps, "Acoes": playbook
         }
 
 # ==================================================
-# 🖥️ INTERFACE E SIDEBAR
+# 🖥️ INTERFACE
 # ==================================================
 with st.sidebar:
-    # --- LOGO ---
     logo_carregado = False
     possible_names = ["strati_logo.png", "Logo Strati.png", "logo.png"]
     for nome_arquivo in possible_names:
@@ -137,26 +161,16 @@ with st.sidebar:
             st.image(nome_arquivo, use_column_width=True)
             logo_carregado = True
             break
-    if not logo_carregado:
-        st.header("STRATI")
+    if not logo_carregado: st.header("STRATI")
         
-    # --- LOGOUT ---
     st.write("---")
     st.caption(f"👤 {st.session_state.get('user_logado', 'Admin')}")
-    
-    # BOTÃO DE SAIR REFORÇADO
     if st.button("Sair / Logout", type="primary"):
-        # Limpa TODAS as variáveis da memória
-        st.session_state.clear()
-        # Recarrega a página (vai cair na tela de login)
-        st.rerun()
-        
+        st.session_state.clear(); st.rerun()
     st.write("---")
     
-    # --- INPUTS LATERAIS ---
     st.markdown("### 1. Perfil do Cliente")
     nome = st.text_input("Nome da Empresa")
-    
     col_tier, col_fase = st.columns(2)
     with col_tier: tier = st.selectbox("Tier", ["Ouro", "Prata", "Bronze"])
     with col_fase: fase = st.selectbox("Fase", ['Onboarding (0-6m)', 'Adoção (6-24m)', 'Retenção (+2 anos)'])
@@ -167,7 +181,6 @@ with st.sidebar:
     c_in = st.number_input("Chamados Abertos", value=5)
     c_out = st.number_input("Chamados Fechados", value=5)
 
-# --- ÁREA PRINCIPAL ---
 st.title("🛡️ Calculadora CS Strati")
 st.markdown(f"Análise: **{nome if nome else 'Novo Cliente'}** | Perfil: **{tier}** - **{fase}**")
 
@@ -183,45 +196,48 @@ with col1:
 with col2:
     with st.container(border=True):
         st.subheader("❤️ Satisfação (NPS)")
-        tem_nps = st.checkbox("Cliente respondeu NPS recente?", value=True)
+        tem_nps = st.checkbox("Respondeu NPS?", value=True)
         if tem_nps:
             nps_valor = st.slider("Nota NPS (0-10)", 0, 10, 9)
-            st.info("NPS será considerado no cálculo.")
         else:
             nps_valor = None
-            st.warning("⚠️ Peso do NPS será redistribuído.")
+            st.warning("⚠️ Peso redistribuído.")
 
 st.write("")
-if st.button("CALCULAR E SALVAR", type="primary", use_container_width=True):
+if st.button("CALCULAR SAÚDE & AÇÕES", type="primary", use_container_width=True):
     if not nome:
-        st.warning("Preencha o nome do cliente para salvar.")
+        st.warning("Preencha o nome do cliente.")
     else:
         modelo = CustomerHealthModel()
-        inputs = {
-            'tier': tier, 'fase': fase, 'nps': nps_valor, 
-            'criados': c_in, 'encerrados': c_out, 'sla': sla, 
-            'visitas': visitas, 'book': book, 'qbr': qbr, 'online': online
-        }
+        inputs = {'tier': tier, 'fase': fase, 'nps': nps_valor, 'criados': c_in, 'encerrados': c_out, 'sla': sla, 'visitas': visitas, 'book': book, 'qbr': qbr, 'online': online}
         res = modelo.calcular(inputs)
         
+        # --- EXIBIÇÃO DO RESULTADO ---
         st.divider()
         c1, c2 = st.columns([1,2])
-        c1.metric("Health Score Final", res['Score'], delta=res['Status'], delta_color="inverse")
+        c1.metric("Health Score", res['Score'], delta=res['Status'], delta_color="inverse")
         
-        msg = f"**Status:** {res['Status']}"
-        if res['Cor'] == 'red': st.error(msg)
-        elif res['Cor'] == 'orange': st.warning(msg)
-        else: st.success(msg)
-        
+        # CARD DE PLAYBOOK (AQUI É A NOVIDADE)
+        with c2:
+            st.subheader("📝 Plano de Ação Sugerido")
+            if res['Cor'] == 'green':
+                container = st.success
+            elif res['Cor'] == 'orange':
+                container = st.warning
+            else:
+                container = st.error
+            
+            with container(icon="🚩"):
+                for acao in res['Acoes']:
+                    st.markdown(f"- {acao}")
+
+        # Salva no Banco
         nps_banco = res['NPS'] if res['NPS'] != "N/A" else ""
         dados_db = {
-            "Data": datetime.now().strftime("%d/%m/%Y %H:%M"),
-            "Cliente": nome, "Tier": tier, "Fase": fase,
-            "Score": res['Score'], "Status": res['Status'],
-            "Técnico": res['Tec'], "Interação": res['Int'],
+            "Data": datetime.now().strftime("%d/%m/%Y %H:%M"), "Cliente": nome, "Tier": tier, "Fase": fase,
+            "Score": res['Score'], "Status": res['Status'], "Técnico": res['Tec'], "Interação": res['Int'],
             "NPS": nps_banco, "Responsável": st.session_state.get('user_logado', 'Admin')
         }
         
-        with st.spinner("Salvando..."):
-            if salvar_no_banco(dados_db):
-                st.toast("Salvo no Google Sheets!", icon="✅")
+        with st.spinner("Registrando..."):
+            salvar_no_banco(dados_db)
