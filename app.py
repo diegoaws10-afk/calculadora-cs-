@@ -73,48 +73,35 @@ class CustomerHealthModel:
         self.sla_targets = {'Ouro': 99.0, 'Prata': 98.0, 'Bronze': 95.0}
 
     def gerar_playbook(self, status, score_tec, score_int, score_nps):
-        """Gera ações recomendadas baseadas nas dores específicas"""
         acoes = []
-        
-        # 1. Playbook de Risco (Crítico/Atenção)
         if status in ["CRÍTICO", "ATENÇÃO"]:
-            acoes.append("⚠️ **Ação Imediata:** Registrar risco no CRM/Planilha.")
-            
-            # Diagnóstico Técnico
+            acoes.append("⚠️ **Ação Imediata:** Registrar risco no CRM.")
             if score_tec < 70:
-                acoes.append("🔧 **Técnico:** Agendar War Room com suporte para revisar chamados abertos.")
-                acoes.append("🔧 **Técnico:** Enviar relatório de SLA e plano de correção.")
-            
-            # Diagnóstico Relacionamento
+                acoes.append("🔧 **Técnico:** Agendar War Room com suporte.")
+                acoes.append("🔧 **Técnico:** Enviar plano de correção de SLA.")
             if score_int < 60:
-                acoes.append("🤝 **Relacionamento:** Agendar visita ou call executiva urgente.")
-                acoes.append("🤝 **Relacionamento:** Reenviar/Reapresentar o Book de Serviços.")
-            
-            # Diagnóstico Satisfação
-            if score_nps != "N/A" and score_nps < 70: # NPS abaixo de 7 (Score 70)
-                acoes.append("❤️ **NPS:** Ligar para o decisor para entender a nota (Entrevista de profundidade).")
-
-        # 2. Playbook de Oportunidade (Saudável)
+                acoes.append("🤝 **Relacionamento:** Agendar visita executiva urgente.")
+            if score_nps != "N/A" and score_nps < 70:
+                acoes.append("❤️ **NPS:** Ligar para entender a nota baixa.")
         else:
-            acoes.append("✅ **Manutenção:** Elogiar o time do cliente na próxima call.")
+            acoes.append("✅ **Manutenção:** Elogiar o time do cliente.")
             if score_nps != "N/A" and score_nps >= 90:
-                acoes.append("⭐ **Advocacia:** Solicitar indicação (Referral) ou depoimento em vídeo.")
+                acoes.append("⭐ **Advocacia:** Solicitar indicação (Referral).")
             if score_int > 90:
-                acoes.append("💰 **Expansão:** Avaliar oportunidade de Upsell/Cross-sell.")
-
+                acoes.append("💰 **Expansão:** Avaliar oportunidade de Upsell.")
         return acoes
 
     def calcular(self, dados):
         regras = self.regras_fase[dados['fase']]
         sla_alvo = self.sla_targets.get(dados['tier'], 98.0)
         
-        # Cálculo Técnico
+        # Técnico
         ratio = 1.0 if dados['criados'] == 0 else dados['encerrados'] / dados['criados']
         score_backlog = min(ratio, 1.0) * 100
         score_sla = 100 if dados['sla'] >= sla_alvo else ((dados['sla'] / sla_alvo) ** 5) * 100
         score_tecnico = (score_sla * 0.70) + (score_backlog * 0.30)
         
-        # Cálculo Interação
+        # Interação
         meta = regras['meta_visitas']
         visitas_score = 100 if meta == 0 else min((dados['visitas']/meta)*100, 100.0)
         book_pts = 100 if dados['book']=='Apresentado' else (50 if dados['book']=='Enviado' else 0)
@@ -122,7 +109,7 @@ class CustomerHealthModel:
         score_interacao = (visitas_score*0.5) + ((book_pts + qbr_pts)/2*0.5) + min(dados['online']*2, 10)
         score_interacao = min(score_interacao, 100.0)
 
-        # Cálculo Final
+        # Final
         peso_nps = regras['peso_nps']
         peso_tec = regras['peso_tecnico']
         peso_int = regras['peso_interacao']
@@ -141,7 +128,6 @@ class CustomerHealthModel:
         if final < 60: status, cor = "CRÍTICO", "red"
         elif final < 75: status, cor = "ATENÇÃO", "orange"
         
-        # Gera o Playbook
         playbook = self.gerar_playbook(status, score_tecnico, score_interacao, msg_nps)
             
         return {
@@ -206,38 +192,3 @@ with col2:
 st.write("")
 if st.button("CALCULAR SAÚDE & AÇÕES", type="primary", use_container_width=True):
     if not nome:
-        st.warning("Preencha o nome do cliente.")
-    else:
-        modelo = CustomerHealthModel()
-        inputs = {'tier': tier, 'fase': fase, 'nps': nps_valor, 'criados': c_in, 'encerrados': c_out, 'sla': sla, 'visitas': visitas, 'book': book, 'qbr': qbr, 'online': online}
-        res = modelo.calcular(inputs)
-        
-        # --- EXIBIÇÃO DO RESULTADO ---
-        st.divider()
-        c1, c2 = st.columns([1,2])
-        c1.metric("Health Score", res['Score'], delta=res['Status'], delta_color="inverse")
-        
-        # CARD DE PLAYBOOK (AQUI É A NOVIDADE)
-        with c2:
-            st.subheader("📝 Plano de Ação Sugerido")
-            if res['Cor'] == 'green':
-                container = st.success
-            elif res['Cor'] == 'orange':
-                container = st.warning
-            else:
-                container = st.error
-            
-            with container(icon="🚩"):
-                for acao in res['Acoes']:
-                    st.markdown(f"- {acao}")
-
-        # Salva no Banco
-        nps_banco = res['NPS'] if res['NPS'] != "N/A" else ""
-        dados_db = {
-            "Data": datetime.now().strftime("%d/%m/%Y %H:%M"), "Cliente": nome, "Tier": tier, "Fase": fase,
-            "Score": res['Score'], "Status": res['Status'], "Técnico": res['Tec'], "Interação": res['Int'],
-            "NPS": nps_banco, "Responsável": st.session_state.get('user_logado', 'Admin')
-        }
-        
-        with st.spinner("Registrando..."):
-            salvar_no_banco(dados_db)
