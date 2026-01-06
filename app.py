@@ -72,17 +72,22 @@ class CustomerHealthModel:
         }
         self.sla_targets = {'Ouro': 99.0, 'Prata': 98.0, 'Bronze': 95.0}
 
-    def gerar_playbook(self, status, score_tec, score_int, score_nps):
+    def gerar_playbook(self, status, score_tec, score_int, score_nps, localizacao):
         acoes = []
         if status in ["CRÍTICO", "ATENÇÃO"]:
             acoes.append("⚠️ **Ação Imediata:** Registrar risco no CRM.")
             if score_tec < 70:
                 acoes.append("🔧 **Técnico:** Agendar War Room com suporte.")
-                acoes.append("🔧 **Técnico:** Enviar plano de correção de SLA.")
+            
+            # Playbook adaptado para geografia
             if score_int < 60:
-                acoes.append("🤝 **Relacionamento:** Agendar visita executiva urgente.")
+                if localizacao == "SP (Local)":
+                    acoes.append("🤝 **Relacionamento:** Agendar visita presencial urgente.")
+                else:
+                    acoes.append("🤝 **Relacionamento:** Agendar Call Executiva com câmera aberta.")
+            
             if score_nps != "N/A" and score_nps < 70:
-                acoes.append("❤️ **NPS:** Ligar para entender a nota baixa.")
+                acoes.append("❤️ **NPS:** Entrevista de profundidade sobre a nota.")
         else:
             acoes.append("✅ **Manutenção:** Elogiar o time do cliente.")
             if score_nps != "N/A" and score_nps >= 90:
@@ -95,25 +100,38 @@ class CustomerHealthModel:
         regras = self.regras_fase[dados['fase']]
         sla_alvo = self.sla_targets.get(dados['tier'], 98.0)
         
-        # Técnico
+        # --- Técnico ---
         ratio = 1.0 if dados['criados'] == 0 else dados['encerrados'] / dados['criados']
         score_backlog = min(ratio, 1.0) * 100
         score_sla = 100 if dados['sla'] >= sla_alvo else ((dados['sla'] / sla_alvo) ** 5) * 100
         score_tecnico = (score_sla * 0.70) + (score_backlog * 0.30)
         
-        # Interação (Com Lógica nova de QBR)
-        meta = regras['meta_visitas']
-        visitas_score = 100 if meta == 0 else min((dados['visitas']/meta)*100, 100.0)
+        # --- Interação (Com Lógica Geográfica) ---
         
-        # Lógica QBR Simplificada: Se apresentou (independente da frequencia) ganha ponto
+        # Se for SP, usa visita. Se for Fora, usa Online como principal.
+        if dados['local'] == "SP (Local)":
+            meta = regras['meta_visitas']
+            # Se meta for 0 (caso raro), score é 100
+            score_presenca = 100 if meta == 0 else min((dados['visitas']/meta)*100, 100.0)
+            bonus_online = min(dados['online']*2, 10) # Online é só um bônus pequeno
+        else:
+            # Regra para Fora de SP: Meta de Online é maior (ex: 2 calls/mês para substituir visita)
+            meta_online_remoto = 2 
+            score_presenca = min((dados['online']/meta_online_remoto)*100, 100.0)
+            bonus_online = 0 # Online já é a métrica principal, não tem bônus extra
+            
+            # Se tiver visita presencial mesmo sendo de fora, ganha bônus de ouro
+            if dados['visitas'] > 0:
+                bonus_online = 10 
+
         qbr_pts = 100 if dados['qbr_realizado'] == 'Sim' else 0
-        
         book_pts = 100 if dados['book']=='Apresentado' else (50 if dados['book']=='Enviado' else 0)
         
-        score_interacao = (visitas_score*0.5) + ((book_pts + qbr_pts)/2*0.5) + min(dados['online']*2, 10)
+        # Fórmula Unificada: score_presenca assume o papel de "Visitas" ou "Calls" dependendo do local
+        score_interacao = (score_presenca*0.5) + ((book_pts + qbr_pts)/2*0.5) + bonus_online
         score_interacao = min(score_interacao, 100.0)
 
-        # Final
+        # --- Final ---
         peso_nps = regras['peso_nps']
         peso_tec = regras['peso_tecnico']
         peso_int = regras['peso_interacao']
@@ -128,21 +146,15 @@ class CustomerHealthModel:
             final = (score_interacao * peso_int) + (score_tecnico * peso_tec) + (score_nps * peso_nps)
             msg_nps = score_nps
 
-        # Definição de Status, Cores e Ícones
+        # Status
         if final < 60: 
-            status = "CRÍTICO"
-            cor = "red"
-            icone = "🚨"
+            status, cor, icone = "CRÍTICO", "red", "🚨"
         elif final < 75: 
-            status = "ATENÇÃO"
-            cor = "orange"
-            icone = "⚠️"
+            status, cor, icone = "ATENÇÃO", "orange", "⚠️"
         else: 
-            status = "SAUDÁVEL"
-            cor = "green"
-            icone = "✅"
+            status, cor, icone = "SAUDÁVEL", "green", "✅"
         
-        playbook = self.gerar_playbook(status, score_tecnico, score_interacao, msg_nps)
+        playbook = self.gerar_playbook(status, score_tecnico, score_interacao, msg_nps, dados['local'])
             
         return {
             "Score": round(final, 1), "Status": status, "Cor": cor, "Icone": icone,
@@ -171,6 +183,10 @@ with st.sidebar:
     
     st.markdown("### 1. Perfil do Cliente")
     nome = st.text_input("Nome da Empresa")
+    
+    # --- NOVA OPÇÃO DE LOCALIZAÇÃO ---
+    local = st.radio("Localização", ["SP (Local)", "Fora de SP (Remoto)"], horizontal=True)
+    
     col_tier, col_fase = st.columns(2)
     with col_tier: tier = st.selectbox("Tier", ["Ouro", "Prata", "Bronze"])
     with col_fase: fase = st.selectbox("Fase", ['Onboarding (0-6m)', 'Adoção (6-24m)', 'Retenção (+2 anos)'])
@@ -188,15 +204,21 @@ col1, col2 = st.columns(2)
 with col1:
     with st.container(border=True):
         st.subheader("🤝 Relacionamento")
-        visitas = st.slider("Visitas Presenciais", 0, 5, 1)
-        online = st.slider("Calls Online", 0, 10, 2)
+        
+        # Exibe inputs diferentes dependendo da localização para facilitar
+        if local == "SP (Local)":
+            visitas = st.slider("Visitas Presenciais", 0, 5, 1)
+            online = st.slider("Calls Online (Bônus)", 0, 10, 2)
+        else:
+            st.info("✈️ Cliente Remoto: 'Calls Online' substituem a meta de Visitas.")
+            online = st.slider("Calls Online (Meta: 2)", 0, 10, 2)
+            visitas = st.slider("Visitas Presenciais (Opcional)", 0, 5, 0)
+            
         book = st.selectbox("Book de Serviços", ["Apresentado", "Enviado", "Não realizado"])
         
-        # --- NOVA LÓGICA DE QBR ---
         st.write("---")
         st.markdown("**QBR (Reunião de Resultados)**")
         qbr_realizado = st.radio("QBR Apresentado?", ["Sim", "Não"], horizontal=True)
-        
         if qbr_realizado == "Sim":
             qbr_freq = st.selectbox("Frequência", ["Trimestral", "Semestral", "Anual"])
         else:
@@ -220,9 +242,9 @@ if st.button("CALCULAR SAÚDE & AÇÕES", type="primary", use_container_width=Tr
     else:
         modelo = CustomerHealthModel()
         inputs = {
-            'tier': tier, 'fase': fase, 'nps': nps_valor, 
-            'criados': c_in, 'encerrados': c_out, 'sla': sla, 
-            'visitas': visitas, 'book': book, 
+            'tier': tier, 'fase': fase, 'local': local, # Passando o local
+            'nps': nps_valor, 'criados': c_in, 'encerrados': c_out, 
+            'sla': sla, 'visitas': visitas, 'book': book, 
             'qbr_realizado': qbr_realizado, 'online': online
         }
         res = modelo.calcular(inputs)
@@ -230,18 +252,11 @@ if st.button("CALCULAR SAÚDE & AÇÕES", type="primary", use_container_width=Tr
         st.divider()
         c1, c2 = st.columns([1,2])
         
-        # --- VISUAL DO SCORE REFORMULADO ---
         with c1:
-            # Exibe o número limpo
             st.metric("Health Score", res['Score'])
-            
-            # Exibe o Status com Cor e Ícone Manualmente (Para garantir a cor certa)
-            if res['Cor'] == 'green':
-                st.success(f"### {res['Icone']} {res['Status']}")
-            elif res['Cor'] == 'orange':
-                st.warning(f"### {res['Icone']} {res['Status']}")
-            else:
-                st.error(f"### {res['Icone']} {res['Status']}")
+            if res['Cor'] == 'green': st.success(f"### {res['Icone']} {res['Status']}")
+            elif res['Cor'] == 'orange': st.warning(f"### {res['Icone']} {res['Status']}")
+            else: st.error(f"### {res['Icone']} {res['Status']}")
         
         with c2:
             st.subheader("📝 Plano de Ação Sugerido")
@@ -255,15 +270,11 @@ if st.button("CALCULAR SAÚDE & AÇÕES", type="primary", use_container_width=Tr
 
         nps_banco = res['NPS'] if res['NPS'] != "N/A" else ""
         
-        # Salva "Sim (Trimestral)" no banco para ficar registrado o detalhe
-        qbr_save = f"{qbr_realizado} ({qbr_freq})" if qbr_realizado == "Sim" else "Não"
-        
         dados_db = {
             "Data": datetime.now().strftime("%d/%m/%Y %H:%M"), "Cliente": nome, "Tier": tier, "Fase": fase,
+            "Local": local, # Salvando no banco para o Looker Studio
             "Score": res['Score'], "Status": res['Status'], "Técnico": res['Tec'], "Interação": res['Int'],
             "NPS": nps_banco, "Responsável": st.session_state.get('user_logado', 'Admin')
-            # Nota: O QBR será salvo apenas implicitamente no score, a menos que adicionemos coluna na planilha.
-            # Para não quebrar sua planilha atual, mantivemos as colunas padrão.
         }
         
         with st.spinner("Registrando..."):
