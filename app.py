@@ -68,6 +68,15 @@ def local_css():
         }
         [data-testid="stMetricLabel"] { font-size: 0.8rem; color: #94a3b8; }
         [data-testid="stMetricValue"] { font-size: 1.5rem !important; color: white; }
+        
+        /* Estilo para o Box de Diagnóstico */
+        .diag-box {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            background-color: rgba(255,255,255,0.05);
+            border-left: 4px solid;
+        }
         </style>
     """, unsafe_allow_html=True)
 
@@ -124,7 +133,7 @@ def salvar_no_banco(dados):
         else: st.error(f"Erro ao salvar: {str(e)}"); return False
 
 # ==================================================
-# 📊 GRÁFICOS AVANÇADOS (RADAR + GAUGE)
+# 📊 GRÁFICOS
 # ==================================================
 def create_radar_chart(tec, interaction, nps):
     val_nps = nps if isinstance(nps, (int, float)) else (tec + interaction)/2
@@ -151,32 +160,26 @@ def create_radar_chart(tec, interaction, nps):
 
 def create_gauge_chart(score):
     fig = go.Figure(go.Indicator(
-        mode = "gauge+number",
-        value = score,
+        mode = "gauge+number", value = score,
         domain = {'x': [0, 1], 'y': [0, 1]},
         number = {'font': {'size': 40, 'color': "white"}, 'suffix': "%"},
         gauge = {
             'axis': {'range': [None, 100], 'tickwidth': 1, 'tickcolor': "white"},
-            'bar': {'color': "rgba(255,255,255,0.3)"}, # Ponteiro translúcido
-            'bgcolor': "rgba(0,0,0,0)",
-            'borderwidth': 0,
+            'bar': {'color': "rgba(255,255,255,0.3)"},
+            'bgcolor': "rgba(0,0,0,0)", 'borderwidth': 0,
             'steps': [
-                {'range': [0, 60], 'color': "#ef4444"},  # Vermelho
-                {'range': [60, 75], 'color': "#f97316"}, # Laranja
-                {'range': [75, 100], 'color': "#22c55e"} # Verde
+                {'range': [0, 60], 'color': "#ef4444"},
+                {'range': [60, 75], 'color': "#f97316"},
+                {'range': [75, 100], 'color': "#22c55e"}
             ],
-            'threshold': {
-                'line': {'color': "white", 'width': 4},
-                'thickness': 0.75,
-                'value': score
-            }
+            'threshold': {'line': {'color': "white", 'width': 4}, 'thickness': 0.75, 'value': score}
         }
     ))
     fig.update_layout(paper_bgcolor = "rgba(0,0,0,0)", font = {'color': "white", 'family': "Inter"}, height=200, margin=dict(l=20, r=20, t=10, b=10))
     return fig
 
 # ==================================================
-# 🧠 LÓGICA CS
+# 🧠 LÓGICA CS (NOVO DIAGNÓSTICO EXECUTIVO)
 # ==================================================
 class CustomerHealthModel:
     def __init__(self):
@@ -187,28 +190,51 @@ class CustomerHealthModel:
         }
         self.sla_targets = {'Ouro': 99.0, 'Prata': 98.0, 'Bronze': 95.0}
 
-    def gerar_playbook(self, status, score_tec, score_int, score_nps, localizacao):
-        acoes = []
-        if status in ["CRÍTICO", "ATENÇÃO"]:
-            acoes.append("⚠️ **Ação Imediata:** Registrar risco no CRM.")
-            if score_tec < 70:
-                acoes.append("🔧 **Técnico:** Agendar War Room com suporte.")
+    def gerar_playbook(self, status, score_tec, score_int, score_nps, localizacao, nome_cliente):
+        estrategia = ""
+        acoes_taticas = []
+        
+        # --- LÓGICA DE DIAGNÓSTICO EXECUTIVO ---
+        
+        if status == "CRÍTICO":
+            estrategia = f"🚨 **PROTOCOLO DE RISCO IMINENTE**\nO cliente {nome_cliente} apresenta indicadores severos de insatisfação ou falha técnica. O risco de Churn é altíssimo no curto prazo. É necessário intervenção executiva."
             
+            # Ações de Alto Nível
+            acoes_taticas.append("**Comercial/CS:** Congelar tentativas de Upsell imediatamente.")
+            acoes_taticas.append("**Liderança:** Acionar 'Sponsor to Sponsor' (Diretor Strati liga para Diretor Cliente).")
+            
+            if score_tec < 60:
+                acoes_taticas.append("**Técnico:** Instituir 'War Room' diária até normalização do SLA.")
             if score_int < 60:
                 if localizacao == "SP (Local)":
-                    acoes.append("🤝 **Relacionamento:** Agendar visita presencial urgente.")
+                    acoes_taticas.append("**Relacionamento:** Visita Presencial de Gestão de Crise (Levar Head de CS).")
                 else:
-                    acoes.append("🤝 **Relacionamento:** Agendar Call Executiva com câmera aberta.")
+                    acoes_taticas.append("**Relacionamento:** Call de Crise com câmera aberta (Obrigatório presença de nível Gerencial).")
+
+        elif status == "ATENÇÃO":
+            estrategia = f"⚠️ **ALERTA DE TENDÊNCIA NEGATIVA**\nHá sinais de desgaste na conta {nome_cliente}. Embora não haja risco imediato de cancelamento, a renovação futura está ameaçada se não houver correção de rota."
             
-            if score_nps != "N/A" and score_nps < 70:
-                acoes.append("❤️ **NPS:** Entrevista de profundidade sobre a nota.")
-        else:
-            acoes.append("✅ **Manutenção:** Elogiar o time do cliente.")
-            if score_nps != "N/A" and score_nps >= 90:
-                acoes.append("⭐ **Advocacia:** Solicitar indicação (Referral).")
+            acoes_taticas.append("**CSM:** Elaborar 'Get Well Plan' (Plano de Recuperação) com metas de 30 dias.")
+            
+            if score_tec < 75:
+                acoes_taticas.append("**Técnico:** Apresentar relatório de causa raiz dos incidentes recentes.")
+            if score_int < 70:
+                acoes_taticas.append("**Relacionamento:** Aumentar frequência de touchpoints para quinzenal.")
+            if score_nps != "N/A" and score_nps < 75:
+                acoes_taticas.append("**Qualidade:** Realizar entrevista de feedback para isolar o motivo da nota neutra/detratora.")
+
+        else: # SAUDÁVEL
+            estrategia = f"🚀 **OPORTUNIDADE DE EXPANSÃO E BLINDAGEM**\nO cliente {nome_cliente} está engajado e obtendo valor. Momento ideal para transformar o sucesso em ativo para a Strati."
+            
+            acoes_taticas.append("**CSM:** Garantir blindagem da próxima renovação (Antecipar negociação).")
+            
             if score_int > 90:
-                acoes.append("💰 **Expansão:** Avaliar oportunidade de Upsell.")
-        return acoes
+                acoes_taticas.append("**Vendas/CS:** Mapear novas áreas/filiais para oferta de Upsell (Expansão de Receita).")
+            if score_nps != "N/A" and score_nps >= 90:
+                acoes_taticas.append("**Marketing:** Solicitar Case de Sucesso público ou Depoimento em Vídeo.")
+                acoes_taticas.append("**Comercial:** Solicitar 3 indicações de empresas parceiras (Referral).")
+
+        return estrategia, acoes_taticas
 
     def calcular(self, dados):
         regras = self.regras_fase[dados['fase']]
@@ -254,12 +280,12 @@ class CustomerHealthModel:
         elif final < 75: status, cor, icone = "ATENÇÃO", "orange", "⚠️"
         else: status, cor, icone = "SAUDÁVEL", "green", "✅"
         
-        playbook = self.gerar_playbook(status, score_tecnico, score_interacao, msg_nps, dados['local'])
+        estrategia, acoes = self.gerar_playbook(status, score_tecnico, score_interacao, msg_nps, dados['local'], dados['nome'])
             
         return {
             "Score": round(final, 1), "Status": status, "Cor": cor, "Icone": icone,
             "Tec": int(score_tecnico), "Int": int(score_interacao), 
-            "NPS": msg_nps, "Acoes": playbook
+            "NPS": msg_nps, "Estrategia": estrategia, "Acoes": acoes
         }
 
 # ==================================================
@@ -306,8 +332,6 @@ with col1:
             online = st.slider("Calls Online (Meta: 2)", 0, 10, 2)
             visitas = st.slider("Visitas Presenciais", 0, 5, 0)
         book = st.selectbox("Book de Serviços", ["Apresentado", "Enviado", "Não realizado"])
-        
-        # --- QBR CORRIGIDA AQUI ---
         st.markdown("**QBR (Resultados)**")
         qbr_realizado = st.radio("QBR Apresentado?", ["Sim", "Não"], horizontal=True)
         if qbr_realizado == "Sim":
@@ -331,7 +355,7 @@ if st.button("PROCESSAR ANÁLISE", type="primary"):
     if not nome:
         st.toast("Preencha o nome do cliente.", icon="⚠️")
     else:
-        progress_text = "Analisando métricas..."
+        progress_text = "Gerando diagnóstico executivo..."
         my_bar = st.progress(0, text=progress_text)
         for percent_complete in range(100):
             time.sleep(0.005)
@@ -340,14 +364,12 @@ if st.button("PROCESSAR ANÁLISE", type="primary"):
 
         fase_map = {'Onboarding': 'Onboarding (0-6m)', 'Adoção': 'Adoção (6-24m)', 'Retenção': 'Retenção (+2 anos)'}
         modelo = CustomerHealthModel()
-        inputs = {'tier': tier, 'fase': fase_map[fase], 'local': local, 'nps': nps_valor, 'criados': c_in, 'encerrados': c_out, 'sla': sla, 'visitas': visitas, 'book': book, 'qbr_realizado': qbr_realizado, 'online': online}
+        inputs = {'tier': tier, 'fase': fase_map[fase], 'local': local, 'nps': nps_valor, 'criados': c_in, 'encerrados': c_out, 'sla': sla, 'visitas': visitas, 'book': book, 'qbr_realizado': qbr_realizado, 'online': online, 'nome': nome}
         res = modelo.calcular(inputs)
         
         st.markdown("---")
         
-        # --- DASHBOARD VISUAL ---
         c_radar, c_gauge = st.columns([1, 1.3])
-        
         with c_radar:
             with st.container(border=True):
                 st.markdown("<p style='text-align:center; color:#94a3b8'>Radar de Equilíbrio</p>", unsafe_allow_html=True)
@@ -355,30 +377,40 @@ if st.button("PROCESSAR ANÁLISE", type="primary"):
                 st.plotly_chart(fig_radar, use_container_width=True)
 
         with c_gauge:
-            # Velocímetro (Gauge) substitui o número estático
             with st.container(border=True):
                 st.markdown(f"<p style='text-align:center; margin-bottom:0'>Health Score Global</p>", unsafe_allow_html=True)
                 fig_gauge = create_gauge_chart(res['Score'])
                 st.plotly_chart(fig_gauge, use_container_width=True)
-                
-                # Métricas em linha abaixo do velocímetro
                 m1, m2, m3 = st.columns(3)
                 m1.metric("Técnico", f"{res['Tec']}%")
                 m2.metric("Relacion.", f"{res['Int']}%")
                 nps_display = str(res['NPS']) if res['NPS'] != "N/A" else "N/A"
                 m3.metric("NPS", nps_display)
 
-        # Plano de Ação
         st.write("")
+        
+        # --- NOVO VISUAL DE DIAGNÓSTICO ---
         with st.container(border=True):
-            st.markdown(f"### 📝 Diagnóstico: {res['Status']}")
-            texto_acoes = ""
-            for acao in res['Acoes']:
-                texto_acoes += f"{acao}\n\n"
+            st.markdown(f"### 📋 Relatório de Diagnóstico")
             
-            if res['Cor'] == 'green': st.success(texto_acoes, icon="✅")
-            elif res['Cor'] == 'orange': st.warning(texto_acoes, icon="⚠️")
-            else: st.error(texto_acoes, icon="🚩")
+            # Caixa da Estratégia
+            if res['Cor'] == 'green':
+                st.success(res['Estrategia'], icon="✅")
+            elif res['Cor'] == 'orange':
+                st.warning(res['Estrategia'], icon="⚠️")
+            else:
+                st.error(res['Estrategia'], icon="🚨")
+            
+            st.write("")
+            st.markdown("**Ações Táticas Sugeridas:**")
+            
+            # Lista de Ações Táticas
+            for acao in res['Acoes']:
+                st.markdown(f"""
+                <div style="background-color:rgba(255,255,255,0.05); padding:10px; border-radius:5px; margin-bottom:5px; border-left: 3px solid #3b82f6;">
+                    {acao}
+                </div>
+                """, unsafe_allow_html=True)
 
         nps_banco = res['NPS'] if res['NPS'] != "N/A" else ""
         dados_db = {
@@ -387,5 +419,4 @@ if st.button("PROCESSAR ANÁLISE", type="primary"):
             "Técnico": res['Tec'], "Interação": res['Int'], "NPS": nps_banco, 
             "Responsável": st.session_state.get('user_logado', 'Admin')
         }
-        
         salvar_no_banco(dados_db)
