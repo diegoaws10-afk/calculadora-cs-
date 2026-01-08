@@ -7,7 +7,103 @@ import time
 import os
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
-st.set_page_config(page_title="Strati | CS Segura", layout="wide", page_icon="🛡️")
+st.set_page_config(page_title="Strati | CS Intelligence", layout="wide", page_icon="🛡️")
+
+# ==================================================
+# 🎨 DESIGN SYSTEM (CSS INJETADO)
+# ==================================================
+def local_css():
+    st.markdown("""
+        <style>
+        /* Importando Fontes Modernas */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Montserrat:wght@600;700&display=swap');
+
+        /* Fundo Geral da Aplicação */
+        .stApp {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            font-family: 'Inter', sans-serif;
+            color: #f8fafc;
+        }
+
+        /* Sidebar - Visual Profissional */
+        [data-testid="stSidebar"] {
+            background-color: #0b1120;
+            border-right: 1px solid #334155;
+        }
+
+        /* Títulos e Cabeçalhos */
+        h1, h2, h3 {
+            font-family: 'Montserrat', sans-serif !important;
+            color: #ffffff !important;
+            font-weight: 700;
+        }
+        
+        /* Ajuste do Título Principal para destaque */
+        h1 {
+            text-shadow: 0px 4px 10px rgba(0,0,0,0.3);
+            background: -webkit-linear-gradient(0deg, #fff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Cartões (Containers) - Efeito Glassmorphism */
+        [data-testid="stVerticalBlockBorderWrapper"] {
+            background-color: rgba(30, 41, 59, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        /* Botões Primários (Estilo Neon/Tech) */
+        div.stButton > button:first-child {
+            background: linear-gradient(90deg, #2563eb 0%, #1d4ed8 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-family: 'Montserrat', sans-serif;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 14px 0 rgba(37, 99, 235, 0.39);
+        }
+        div.stButton > button:first-child:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.23);
+            background: linear-gradient(90deg, #1d4ed8 0%, #1e40af 100%);
+        }
+
+        /* Inputs e Selectboxes */
+        .stTextInput input, .stSelectbox div[data-baseweb="select"], .stNumberInput input {
+            background-color: #1e293b !important;
+            color: white !important;
+            border: 1px solid #475569 !important;
+            border-radius: 6px;
+        }
+        
+        /* Métricas (Big Numbers) */
+        [data-testid="stMetricValue"] {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 3rem !important;
+            font-weight: 700;
+        }
+
+        /* Ajuste de Alertas (Success, Error, Warning) */
+        .stAlert {
+            background-color: rgba(30, 41, 59, 0.9);
+            border: none;
+            border-radius: 8px;
+        }
+        
+        /* Remove padding extra do topo */
+        .block-container {
+            padding-top: 2rem;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+local_css()
 
 # ==================================================
 # 🔐 SEGURANÇA
@@ -16,30 +112,35 @@ def check_authentication():
     if st.session_state.get("authenticated", False):
         return True
 
-    st.markdown("<br><div style='text-align:center'><h2>🔐 Acesso Seguro Strati</h2></div>", unsafe_allow_html=True)
-    
-    col1, col2, col3 = st.columns([1,1,1])
+    # Tela de Login Estilizada
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1,1.5,1])
     with col2:
-        with st.form("login_form"):
-            username = st.text_input("Usuário")
-            password = st.text_input("Senha", type="password")
-            token_mfa = st.text_input("Código Authenticator") 
-            submit = st.form_submit_button("Entrar")
+        with st.container(border=True):
+            st.markdown("<h2 style='text-align: center; color: white;'>🔐 Strati | Secure Access</h2>", unsafe_allow_html=True)
+            st.markdown("<p style='text-align: center; color: #94a3b8;'>Área restrita para equipe de CS</p>", unsafe_allow_html=True)
             
-            if submit:
-                if username in st.secrets["passwords"] and password == st.secrets["passwords"][username]:
-                    secret_key = st.secrets["mfa"]["secret_key"]
-                    totp = pyotp.TOTP(secret_key)
-                    if totp.verify(token_mfa.replace(" ", "")):
-                        st.session_state["authenticated"] = True
-                        st.session_state["user_logado"] = username
-                        st.success("Login realizado!")
-                        time.sleep(0.5)
-                        st.rerun()
+            with st.form("login_form"):
+                username = st.text_input("Usuário")
+                password = st.text_input("Senha", type="password")
+                token_mfa = st.text_input("Código Authenticator") 
+                st.write("")
+                submit = st.form_submit_button("ACESSAR SISTEMA", use_container_width=True)
+                
+                if submit:
+                    if username in st.secrets["passwords"] and password == st.secrets["passwords"][username]:
+                        secret_key = st.secrets["mfa"]["secret_key"]
+                        totp = pyotp.TOTP(secret_key)
+                        if totp.verify(token_mfa.replace(" ", "")):
+                            st.session_state["authenticated"] = True
+                            st.session_state["user_logado"] = username
+                            st.toast("Login realizado com sucesso!", icon="🔓")
+                            time.sleep(0.5)
+                            st.rerun()
+                        else:
+                            st.error("Código MFA Inválido.")
                     else:
-                        st.error("❌ Código MFA Inválido.")
-                else:
-                    st.error("❌ Usuário ou Senha incorretos.")
+                        st.error("Credenciais inválidas.")
     return False
 
 if not check_authentication():
@@ -61,7 +162,7 @@ def salvar_no_banco(dados):
         else: st.error(f"Erro ao salvar: {str(e)}"); return False
 
 # ==================================================
-# 🧠 LÓGICA CS + PLAYBOOKS
+# 🧠 LÓGICA CS
 # ==================================================
 class CustomerHealthModel:
     def __init__(self):
@@ -79,7 +180,6 @@ class CustomerHealthModel:
             if score_tec < 70:
                 acoes.append("🔧 **Técnico:** Agendar War Room com suporte.")
             
-            # Playbook adaptado para geografia
             if score_int < 60:
                 if localizacao == "SP (Local)":
                     acoes.append("🤝 **Relacionamento:** Agendar visita presencial urgente.")
@@ -100,38 +200,29 @@ class CustomerHealthModel:
         regras = self.regras_fase[dados['fase']]
         sla_alvo = self.sla_targets.get(dados['tier'], 98.0)
         
-        # --- Técnico ---
+        # Técnico
         ratio = 1.0 if dados['criados'] == 0 else dados['encerrados'] / dados['criados']
         score_backlog = min(ratio, 1.0) * 100
         score_sla = 100 if dados['sla'] >= sla_alvo else ((dados['sla'] / sla_alvo) ** 5) * 100
         score_tecnico = (score_sla * 0.70) + (score_backlog * 0.30)
         
-        # --- Interação (Com Lógica Geográfica) ---
-        
-        # Se for SP, usa visita. Se for Fora, usa Online como principal.
+        # Interação
         if dados['local'] == "SP (Local)":
             meta = regras['meta_visitas']
-            # Se meta for 0 (caso raro), score é 100
             score_presenca = 100 if meta == 0 else min((dados['visitas']/meta)*100, 100.0)
-            bonus_online = min(dados['online']*2, 10) # Online é só um bônus pequeno
+            bonus_online = min(dados['online']*2, 10)
         else:
-            # Regra para Fora de SP: Meta de Online é maior (ex: 2 calls/mês para substituir visita)
             meta_online_remoto = 2 
             score_presenca = min((dados['online']/meta_online_remoto)*100, 100.0)
-            bonus_online = 0 # Online já é a métrica principal, não tem bônus extra
-            
-            # Se tiver visita presencial mesmo sendo de fora, ganha bônus de ouro
-            if dados['visitas'] > 0:
-                bonus_online = 10 
+            bonus_online = 0 if dados['visitas'] == 0 else 10 
 
         qbr_pts = 100 if dados['qbr_realizado'] == 'Sim' else 0
         book_pts = 100 if dados['book']=='Apresentado' else (50 if dados['book']=='Enviado' else 0)
         
-        # Fórmula Unificada: score_presenca assume o papel de "Visitas" ou "Calls" dependendo do local
         score_interacao = (score_presenca*0.5) + ((book_pts + qbr_pts)/2*0.5) + bonus_online
         score_interacao = min(score_interacao, 100.0)
 
-        # --- Final ---
+        # Final
         peso_nps = regras['peso_nps']
         peso_tec = regras['peso_tecnico']
         peso_int = regras['peso_interacao']
@@ -146,7 +237,6 @@ class CustomerHealthModel:
             final = (score_interacao * peso_int) + (score_tecnico * peso_tec) + (score_nps * peso_nps)
             msg_nps = score_nps
 
-        # Status
         if final < 60: 
             status, cor, icone = "CRÍTICO", "red", "🚨"
         elif final < 75: 
@@ -163,7 +253,7 @@ class CustomerHealthModel:
         }
 
 # ==================================================
-# 🖥️ INTERFACE
+# 🖥️ INTERFACE PRINCIPAL
 # ==================================================
 with st.sidebar:
     logo_carregado = False
@@ -173,110 +263,119 @@ with st.sidebar:
             st.image(nome_arquivo, use_column_width=True)
             logo_carregado = True
             break
-    if not logo_carregado: st.header("STRATI")
+    if not logo_carregado: st.markdown("<h1>STRATI</h1>", unsafe_allow_html=True)
         
     st.write("---")
-    st.caption(f"👤 {st.session_state.get('user_logado', 'Admin')}")
-    if st.button("Sair / Logout", type="primary"):
+    
+    # Botão de Sair com estilo sutil
+    if st.button("🚪 Encerrar Sessão"):
         st.session_state.clear(); st.rerun()
-    st.write("---")
     
-    st.markdown("### 1. Perfil do Cliente")
-    nome = st.text_input("Nome da Empresa")
-    
-    # --- NOVA OPÇÃO DE LOCALIZAÇÃO ---
+    st.markdown("### 1. Perfil")
+    nome = st.text_input("Nome da Empresa", placeholder="Ex: Strati Tecnologia")
     local = st.radio("Localização", ["SP (Local)", "Fora de SP (Remoto)"], horizontal=True)
     
-    col_tier, col_fase = st.columns(2)
-    with col_tier: tier = st.selectbox("Tier", ["Ouro", "Prata", "Bronze"])
-    with col_fase: fase = st.selectbox("Fase", ['Onboarding (0-6m)', 'Adoção (6-24m)', 'Retenção (+2 anos)'])
+    c1, c2 = st.columns(2)
+    tier = c1.selectbox("Tier", ["Ouro", "Prata", "Bronze"])
+    fase = c2.selectbox("Fase", ['Onboarding', 'Adoção', 'Retenção'])
     
     st.write("---")
-    st.markdown("### 2. Métricas")
+    st.markdown("### 2. Chamados")
     sla = st.slider("SLA Realizado (%)", 80.0, 100.0, 98.0)
-    c_in = st.number_input("Chamados Abertos", value=5)
-    c_out = st.number_input("Chamados Fechados", value=5)
+    c1, c2 = st.columns(2)
+    c_in = c1.number_input("Abertos", value=5)
+    c_out = c2.number_input("Fechados", value=5)
 
-st.title("🛡️ Calculadora CS Strati")
-st.markdown(f"Análise: **{nome if nome else 'Novo Cliente'}** | Perfil: **{tier}** - **{fase}**")
+# Título Estilizado
+st.markdown("<h1>🛡️ Calculadora CS <span style='color:#2563eb'>Intelligence</span></h1>", unsafe_allow_html=True)
+st.markdown(f"<p style='color:#94a3b8'>Análise de Saúde: <b>{nome if nome else 'Novo Cliente'}</b></p>", unsafe_allow_html=True)
 
+# Layout em Cartões
 col1, col2 = st.columns(2)
+
 with col1:
     with st.container(border=True):
-        st.subheader("🤝 Relacionamento")
-        
-        # Exibe inputs diferentes dependendo da localização para facilitar
+        st.markdown("### 🤝 Relacionamento")
+        st.write("")
         if local == "SP (Local)":
             visitas = st.slider("Visitas Presenciais", 0, 5, 1)
             online = st.slider("Calls Online (Bônus)", 0, 10, 2)
         else:
-            st.info("✈️ Cliente Remoto: 'Calls Online' substituem a meta de Visitas.")
+            st.info("✈️ Cliente Remoto: Foco em Calls Online")
             online = st.slider("Calls Online (Meta: 2)", 0, 10, 2)
             visitas = st.slider("Visitas Presenciais (Opcional)", 0, 5, 0)
             
         book = st.selectbox("Book de Serviços", ["Apresentado", "Enviado", "Não realizado"])
-        
-        st.write("---")
-        st.markdown("**QBR (Reunião de Resultados)**")
+        st.write("")
+        st.markdown("**QBR (Resultados)**")
         qbr_realizado = st.radio("QBR Apresentado?", ["Sim", "Não"], horizontal=True)
-        if qbr_realizado == "Sim":
-            qbr_freq = st.selectbox("Frequência", ["Trimestral", "Semestral", "Anual"])
-        else:
-            qbr_freq = "N/A"
-            st.caption("Sem pontuação de QBR.")
+        qbr_freq = st.selectbox("Frequência", ["Trimestral", "Semestral", "Anual"]) if qbr_realizado == "Sim" else "N/A"
 
 with col2:
     with st.container(border=True):
-        st.subheader("❤️ Satisfação (NPS)")
-        tem_nps = st.checkbox("Respondeu NPS?", value=True)
+        st.markdown("### ❤️ Satisfação (NPS)")
+        st.write("")
+        tem_nps = st.toggle("Cliente respondeu NPS recente?", value=True) # Mudei para Toggle (mais moderno)
         if tem_nps:
             nps_valor = st.slider("Nota NPS (0-10)", 0, 10, 9)
         else:
             nps_valor = None
-            st.warning("⚠️ Peso redistribuído.")
+            st.warning("⚖️ Peso redistribuído automaticamente.")
 
 st.write("")
-if st.button("CALCULAR SAÚDE & AÇÕES", type="primary", use_container_width=True):
+st.write("")
+
+# Botão de Ação Grande
+if st.button("PROCESSAR ANÁLISE DE SAÚDE", type="primary", use_container_width=True):
     if not nome:
-        st.warning("Preencha o nome do cliente.")
+        st.toast("Por favor, preencha o nome do cliente.", icon="⚠️")
     else:
+        # Corrige o mapeamento da fase (Sidebar estava abreviada)
+        fase_map = {'Onboarding': 'Onboarding (0-6m)', 'Adoção': 'Adoção (6-24m)', 'Retenção': 'Retenção (+2 anos)'}
+        
         modelo = CustomerHealthModel()
         inputs = {
-            'tier': tier, 'fase': fase, 'local': local, # Passando o local
+            'tier': tier, 'fase': fase_map[fase], 'local': local,
             'nps': nps_valor, 'criados': c_in, 'encerrados': c_out, 
             'sla': sla, 'visitas': visitas, 'book': book, 
             'qbr_realizado': qbr_realizado, 'online': online
         }
         res = modelo.calcular(inputs)
         
-        st.divider()
-        c1, c2 = st.columns([1,2])
+        st.markdown("---")
         
-        with c1:
-            st.metric("Health Score", res['Score'])
-            if res['Cor'] == 'green': st.success(f"### {res['Icone']} {res['Status']}")
-            elif res['Cor'] == 'orange': st.warning(f"### {res['Icone']} {res['Status']}")
-            else: st.error(f"### {res['Icone']} {res['Status']}")
+        # Resultados Visuais
+        c_score, c_acao = st.columns([1, 1.5])
         
-        with c2:
-            st.subheader("📝 Plano de Ação Sugerido")
-            texto_acoes = ""
-            for acao in res['Acoes']:
-                texto_acoes += f"{acao}\n\n"
-            
-            if res['Cor'] == 'green': st.success(texto_acoes, icon="✅")
-            elif res['Cor'] == 'orange': st.warning(texto_acoes, icon="⚠️")
-            else: st.error(texto_acoes, icon="🚩")
+        with c_score:
+            with st.container(border=True):
+                st.markdown("<p style='text-align:center; margin-bottom:0'>HEALTH SCORE</p>", unsafe_allow_html=True)
+                
+                # Cores dinâmicas para o número
+                cor_num = "#22c55e" if res['Cor'] == 'green' else ("#f97316" if res['Cor'] == 'orange' else "#ef4444")
+                st.markdown(f"<h1 style='text-align:center; color:{cor_num}; font-size: 4rem !important'>{res['Score']}</h1>", unsafe_allow_html=True)
+                
+                st.markdown(f"<h3 style='text-align:center'>{res['Icone']} {res['Status']}</h3>", unsafe_allow_html=True)
+        
+        with c_acao:
+            with st.container(border=True):
+                st.markdown("### 📝 Diagnóstico & Ações")
+                texto_acoes = ""
+                for acao in res['Acoes']:
+                    texto_acoes += f"{acao}\n\n"
+                
+                if res['Cor'] == 'green': st.success(texto_acoes, icon="✅")
+                elif res['Cor'] == 'orange': st.warning(texto_acoes, icon="⚠️")
+                else: st.error(texto_acoes, icon="🚩")
 
         nps_banco = res['NPS'] if res['NPS'] != "N/A" else ""
-        
         dados_db = {
             "Data": datetime.now().strftime("%d/%m/%Y %H:%M"), "Cliente": nome, "Tier": tier, "Fase": fase,
-            "Local": local, # Salvando no banco para o Looker Studio
-            "Score": res['Score'], "Status": res['Status'], "Técnico": res['Tec'], "Interação": res['Int'],
+            "Local": local, "Score": res['Score'], "Status": res['Status'], 
+            "Técnico": res['Tec'], "Interação": res['Int'],
             "NPS": nps_banco, "Responsável": st.session_state.get('user_logado', 'Admin')
         }
         
-        with st.spinner("Registrando..."):
+        with st.spinner("Sincronizando banco de dados..."):
             salvar_no_banco(dados_db)
-            st.toast("Sucesso! Dados salvos.", icon="✅")
+            st.toast("Análise registrada com sucesso!", icon="💾")
