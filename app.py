@@ -69,7 +69,6 @@ def local_css():
         [data-testid="stMetricLabel"] { font-size: 0.8rem; color: #94a3b8; }
         [data-testid="stMetricValue"] { font-size: 1.5rem !important; color: white; }
         
-        /* Estilo para o Box de Diagnóstico */
         .diag-box {
             padding: 15px;
             border-radius: 8px;
@@ -179,7 +178,7 @@ def create_gauge_chart(score):
     return fig
 
 # ==================================================
-# 🧠 LÓGICA CS (NOVO DIAGNÓSTICO EXECUTIVO)
+# 🧠 LÓGICA CS
 # ==================================================
 class CustomerHealthModel:
     def __init__(self):
@@ -194,45 +193,29 @@ class CustomerHealthModel:
         estrategia = ""
         acoes_taticas = []
         
-        # --- LÓGICA DE DIAGNÓSTICO EXECUTIVO ---
-        
         if status == "CRÍTICO":
-            estrategia = f"🚨 **PROTOCOLO DE RISCO IMINENTE**\nO cliente {nome_cliente} apresenta indicadores severos de insatisfação ou falha técnica. O risco de Churn é altíssimo no curto prazo. É necessário intervenção executiva."
-            
-            # Ações de Alto Nível
-            acoes_taticas.append("**Comercial/CS:** Congelar tentativas de Upsell imediatamente.")
-            acoes_taticas.append("**Liderança:** Acionar 'Sponsor to Sponsor' (Diretor Strati liga para Diretor Cliente).")
-            
-            if score_tec < 60:
-                acoes_taticas.append("**Técnico:** Instituir 'War Room' diária até normalização do SLA.")
+            estrategia = f"🚨 PROTOCOLO DE RISCO IMINENTE: O cliente {nome_cliente} apresenta indicadores severos. Risco de Churn altíssimo."
+            acoes_taticas.append("Liderança: Acionar 'Sponsor to Sponsor' imediatamente.")
+            acoes_taticas.append("Comercial: Congelar tentativas de Upsell.")
+            if score_tec < 60: acoes_taticas.append("Técnico: Instituir War Room diária.")
             if score_int < 60:
-                if localizacao == "SP (Local)":
-                    acoes_taticas.append("**Relacionamento:** Visita Presencial de Gestão de Crise (Levar Head de CS).")
-                else:
-                    acoes_taticas.append("**Relacionamento:** Call de Crise com câmera aberta (Obrigatório presença de nível Gerencial).")
+                msg_visita = "Visita Presencial de Gestão de Crise." if localizacao == "SP (Local)" else "Call de Crise com câmera aberta (Gerencial)."
+                acoes_taticas.append(f"Relacionamento: {msg_visita}")
 
         elif status == "ATENÇÃO":
-            estrategia = f"⚠️ **ALERTA DE TENDÊNCIA NEGATIVA**\nHá sinais de desgaste na conta {nome_cliente}. Embora não haja risco imediato de cancelamento, a renovação futura está ameaçada se não houver correção de rota."
-            
-            acoes_taticas.append("**CSM:** Elaborar 'Get Well Plan' (Plano de Recuperação) com metas de 30 dias.")
-            
-            if score_tec < 75:
-                acoes_taticas.append("**Técnico:** Apresentar relatório de causa raiz dos incidentes recentes.")
-            if score_int < 70:
-                acoes_taticas.append("**Relacionamento:** Aumentar frequência de touchpoints para quinzenal.")
-            if score_nps != "N/A" and score_nps < 75:
-                acoes_taticas.append("**Qualidade:** Realizar entrevista de feedback para isolar o motivo da nota neutra/detratora.")
+            estrategia = f"⚠️ ALERTA DE TENDÊNCIA: Desgaste identificado na conta {nome_cliente}. Renovação futura ameaçada."
+            acoes_taticas.append("CSM: Elaborar 'Get Well Plan' (30 dias).")
+            if score_tec < 75: acoes_taticas.append("Técnico: Relatório de causa raiz dos incidentes.")
+            if score_int < 70: acoes_taticas.append("Relacionamento: Aumentar frequência para quinzenal.")
+            if score_nps != "N/A" and score_nps < 75: acoes_taticas.append("Qualidade: Entrevista de feedback sobre a nota.")
 
         else: # SAUDÁVEL
-            estrategia = f"🚀 **OPORTUNIDADE DE EXPANSÃO E BLINDAGEM**\nO cliente {nome_cliente} está engajado e obtendo valor. Momento ideal para transformar o sucesso em ativo para a Strati."
-            
-            acoes_taticas.append("**CSM:** Garantir blindagem da próxima renovação (Antecipar negociação).")
-            
-            if score_int > 90:
-                acoes_taticas.append("**Vendas/CS:** Mapear novas áreas/filiais para oferta de Upsell (Expansão de Receita).")
+            estrategia = f"🚀 OPORTUNIDADE: Cliente {nome_cliente} engajado. Momento de expansão."
+            acoes_taticas.append("CSM: Blindar próxima renovação.")
+            if score_int > 90: acoes_taticas.append("Vendas: Mapear áreas para Upsell.")
             if score_nps != "N/A" and score_nps >= 90:
-                acoes_taticas.append("**Marketing:** Solicitar Case de Sucesso público ou Depoimento em Vídeo.")
-                acoes_taticas.append("**Comercial:** Solicitar 3 indicações de empresas parceiras (Referral).")
+                acoes_taticas.append("Marketing: Solicitar Case ou Depoimento.")
+                acoes_taticas.append("Comercial: Pedir indicações (Referral).")
 
         return estrategia, acoes_taticas
 
@@ -240,13 +223,13 @@ class CustomerHealthModel:
         regras = self.regras_fase[dados['fase']]
         sla_alvo = self.sla_targets.get(dados['tier'], 98.0)
         
-        # Técnico
+        # Cálculo Técnico
         ratio = 1.0 if dados['criados'] == 0 else dados['encerrados'] / dados['criados']
         score_backlog = min(ratio, 1.0) * 100
         score_sla = 100 if dados['sla'] >= sla_alvo else ((dados['sla'] / sla_alvo) ** 5) * 100
         score_tecnico = (score_sla * 0.70) + (score_backlog * 0.30)
         
-        # Interação
+        # Cálculo Interação
         if dados['local'] == "SP (Local)":
             meta = regras['meta_visitas']
             score_presenca = 100 if meta == 0 else min((dados['visitas']/meta)*100, 100.0)
@@ -355,7 +338,7 @@ if st.button("PROCESSAR ANÁLISE", type="primary"):
     if not nome:
         st.toast("Preencha o nome do cliente.", icon="⚠️")
     else:
-        progress_text = "Gerando diagnóstico executivo..."
+        progress_text = "Gerando diagnóstico..."
         my_bar = st.progress(0, text=progress_text)
         for percent_complete in range(100):
             time.sleep(0.005)
@@ -388,35 +371,29 @@ if st.button("PROCESSAR ANÁLISE", type="primary"):
                 m3.metric("NPS", nps_display)
 
         st.write("")
-        
-        # --- NOVO VISUAL DE DIAGNÓSTICO ---
         with st.container(border=True):
             st.markdown(f"### 📋 Relatório de Diagnóstico")
-            
-            # Caixa da Estratégia
-            if res['Cor'] == 'green':
-                st.success(res['Estrategia'], icon="✅")
-            elif res['Cor'] == 'orange':
-                st.warning(res['Estrategia'], icon="⚠️")
-            else:
-                st.error(res['Estrategia'], icon="🚨")
+            if res['Cor'] == 'green': st.success(res['Estrategia'], icon="✅")
+            elif res['Cor'] == 'orange': st.warning(res['Estrategia'], icon="⚠️")
+            else: st.error(res['Estrategia'], icon="🚨")
             
             st.write("")
             st.markdown("**Ações Táticas Sugeridas:**")
-            
-            # Lista de Ações Táticas
             for acao in res['Acoes']:
-                st.markdown(f"""
-                <div style="background-color:rgba(255,255,255,0.05); padding:10px; border-radius:5px; margin-bottom:5px; border-left: 3px solid #3b82f6;">
-                    {acao}
-                </div>
-                """, unsafe_allow_html=True)
+                st.markdown(f"""<div style="background-color:rgba(255,255,255,0.05); padding:10px; border-radius:5px; margin-bottom:5px; border-left: 3px solid #3b82f6;">{acao}</div>""", unsafe_allow_html=True)
 
         nps_banco = res['NPS'] if res['NPS'] != "N/A" else ""
+        
+        # --- PREPARA O TEXTO DO PLAYBOOK PARA O BANCO ---
+        str_acoes = "\n".join([f"- {a}" for a in res['Acoes']])
+        playbook_completo = f"{res['Estrategia']}\n\n[AÇÕES SUGERIDAS]\n{str_acoes}"
+        
         dados_db = {
             "Data": datetime.now().strftime("%d/%m/%Y %H:%M"), "Cliente": nome, "Tier": tier, "Fase": fase,
             "Local": local, "Score": res['Score'], "Status": res['Status'], 
             "Técnico": res['Tec'], "Interação": res['Int'], "NPS": nps_banco, 
-            "Responsável": st.session_state.get('user_logado', 'Admin')
+            "Responsável": st.session_state.get('user_logado', 'Admin'),
+            "Playbook": playbook_completo # Salva tudo junto numa célula
         }
         salvar_no_banco(dados_db)
+        st.toast("Sucesso! Análise e Playbook salvos.", icon="💾")
