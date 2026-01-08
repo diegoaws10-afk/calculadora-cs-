@@ -5,7 +5,7 @@ from datetime import datetime
 import pyotp
 import time
 import os
-import plotly.graph_objects as go # Biblioteca Gráfica Nova
+import plotly.graph_objects as go
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="Strati | CS Intelligence", layout="wide", page_icon="🛡️")
@@ -24,7 +24,6 @@ def local_css():
             color: #f8fafc;
         }
         
-        /* Sidebar */
         [data-testid="stSidebar"] {
             background-color: #0b1120;
             border-right: 1px solid #334155;
@@ -45,7 +44,6 @@ def local_css():
             padding: 20px;
         }
 
-        /* Botão Principal */
         div.stButton > button:first-child {
             background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
             color: white;
@@ -53,7 +51,6 @@ def local_css():
             padding: 14px 24px;
             border-radius: 10px;
             font-weight: 600;
-            letter-spacing: 0.5px;
             transition: all 0.3s ease;
             width: 100%;
         }
@@ -62,16 +59,15 @@ def local_css():
             box-shadow: 0 10px 20px rgba(37, 99, 235, 0.3);
         }
 
-        /* Métricas (Cards de Resultado) */
         [data-testid="stMetric"] {
             background-color: rgba(255, 255, 255, 0.05);
-            padding: 15px;
+            padding: 10px;
             border-radius: 10px;
             text-align: center;
             border: 1px solid rgba(255,255,255,0.1);
         }
-        [data-testid="stMetricLabel"] { font-size: 0.9rem; color: #94a3b8; }
-        [data-testid="stMetricValue"] { font-size: 1.8rem !important; color: white; }
+        [data-testid="stMetricLabel"] { font-size: 0.8rem; color: #94a3b8; }
+        [data-testid="stMetricValue"] { font-size: 1.5rem !important; color: white; }
         </style>
     """, unsafe_allow_html=True)
 
@@ -95,7 +91,6 @@ def check_authentication():
                 token_mfa = st.text_input("Código Authenticator") 
                 st.write("")
                 submit = st.form_submit_button("ACESSAR SISTEMA")
-                
                 if submit:
                     if username in st.secrets["passwords"] and password == st.secrets["passwords"][username]:
                         secret_key = st.secrets["mfa"]["secret_key"]
@@ -129,40 +124,55 @@ def salvar_no_banco(dados):
         else: st.error(f"Erro ao salvar: {str(e)}"); return False
 
 # ==================================================
-# 📊 GRÁFICO DE RADAR (NOVIDADE V8)
+# 📊 GRÁFICOS AVANÇADOS (RADAR + GAUGE)
 # ==================================================
 def create_radar_chart(tec, interaction, nps):
-    # Trata NPS N/A para o gráfico (se for N/A, assume média dos outros para visual)
     val_nps = nps if isinstance(nps, (int, float)) else (tec + interaction)/2
-    
     categories = ['Técnico', 'Relacionamento', 'Satisfação (NPS)']
     values = [tec, interaction, val_nps]
-    
-    # Fecha o ciclo do gráfico
     values += [values[0]]
     categories += [categories[0]]
 
     fig = go.Figure(data=go.Scatterpolar(
-        r=values,
-        theta=categories,
-        fill='toself',
-        fillcolor='rgba(37, 99, 235, 0.3)', # Azul translúcido
+        r=values, theta=categories, fill='toself',
+        fillcolor='rgba(37, 99, 235, 0.3)',
         line=dict(color='#3b82f6', width=3),
         marker=dict(size=6, color='white')
     ))
-
     fig.update_layout(
         polar=dict(
-            radialaxis=dict(visible=True, range=[0, 100], color='#94a3b8', showline=False, tickfont=dict(color='#64748b')),
-            bgcolor='rgba(0,0,0,0)',
-            gridshape='circular'
+            radialaxis=dict(visible=True, range=[0, 100], color='#94a3b8', showline=False),
+            bgcolor='rgba(0,0,0,0)', gridshape='circular'
         ),
-        paper_bgcolor='rgba(0,0,0,0)', # Fundo transparente
-        plot_bgcolor='rgba(0,0,0,0)',
-        showlegend=False,
-        margin=dict(l=40, r=40, t=20, b=20),
-        height=250 # Altura compacta
+        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+        showlegend=False, margin=dict(l=40, r=40, t=20, b=20), height=220
     )
+    return fig
+
+def create_gauge_chart(score):
+    fig = go.Figure(go.Indicator(
+        mode = "gauge+number",
+        value = score,
+        domain = {'x': [0, 1], 'y': [0, 1]},
+        number = {'font': {'size': 40, 'color': "white"}, 'suffix': "%"},
+        gauge = {
+            'axis': {'range': [None, 100], 'tickwidth': 1, 'tickcolor': "white"},
+            'bar': {'color': "rgba(255,255,255,0.3)"}, # Ponteiro translúcido
+            'bgcolor': "rgba(0,0,0,0)",
+            'borderwidth': 0,
+            'steps': [
+                {'range': [0, 60], 'color': "#ef4444"},  # Vermelho
+                {'range': [60, 75], 'color': "#f97316"}, # Laranja
+                {'range': [75, 100], 'color': "#22c55e"} # Verde
+            ],
+            'threshold': {
+                'line': {'color': "white", 'width': 4},
+                'thickness': 0.75,
+                'value': score
+            }
+        }
+    ))
+    fig.update_layout(paper_bgcolor = "rgba(0,0,0,0)", font = {'color': "white", 'family': "Inter"}, height=200, margin=dict(l=20, r=20, t=10, b=10))
     return fig
 
 # ==================================================
@@ -296,8 +306,14 @@ with col1:
             online = st.slider("Calls Online (Meta: 2)", 0, 10, 2)
             visitas = st.slider("Visitas Presenciais", 0, 5, 0)
         book = st.selectbox("Book de Serviços", ["Apresentado", "Enviado", "Não realizado"])
+        
+        # --- QBR CORRIGIDA AQUI ---
         st.markdown("**QBR (Resultados)**")
         qbr_realizado = st.radio("QBR Apresentado?", ["Sim", "Não"], horizontal=True)
+        if qbr_realizado == "Sim":
+            qbr_freq = st.selectbox("Frequência", ["Trimestral", "Semestral", "Anual"])
+        else:
+            qbr_freq = "N/A"
 
 with col2:
     with st.container(border=True):
@@ -315,7 +331,6 @@ if st.button("PROCESSAR ANÁLISE", type="primary"):
     if not nome:
         st.toast("Preencha o nome do cliente.", icon="⚠️")
     else:
-        # Barra de progresso para dar sensação de processamento
         progress_text = "Analisando métricas..."
         my_bar = st.progress(0, text=progress_text)
         for percent_complete in range(100):
@@ -330,40 +345,33 @@ if st.button("PROCESSAR ANÁLISE", type="primary"):
         
         st.markdown("---")
         
-        # --- LAYOUT DE RESULTADOS (DATA VIZ) ---
-        c_chart, c_metrics = st.columns([1, 1.5])
+        # --- DASHBOARD VISUAL ---
+        c_radar, c_gauge = st.columns([1, 1.3])
         
-        with c_chart:
-            # Novo: Gráfico de Radar
+        with c_radar:
             with st.container(border=True):
-                st.markdown("<p style='text-align:center; color:#94a3b8'>Equilíbrio da Saúde</p>", unsafe_allow_html=True)
-                fig = create_radar_chart(res['Tec'], res['Int'], res['NPS'])
-                st.plotly_chart(fig, use_container_width=True)
+                st.markdown("<p style='text-align:center; color:#94a3b8'>Radar de Equilíbrio</p>", unsafe_allow_html=True)
+                fig_radar = create_radar_chart(res['Tec'], res['Int'], res['NPS'])
+                st.plotly_chart(fig_radar, use_container_width=True)
 
-        with c_metrics:
-            # Score Geral
-            cor_num = "#22c55e" if res['Cor'] == 'green' else ("#f97316" if res['Cor'] == 'orange' else "#ef4444")
-            
-            c_score_main, c_score_status = st.columns([1.5, 1])
-            with c_score_main:
-                st.markdown(f"<h1 style='color:{cor_num}; font-size: 3.5rem !important; line-height:1'>{res['Score']}</h1>", unsafe_allow_html=True)
-                st.caption("HEALTH SCORE GLOBAL")
-            with c_score_status:
-                 st.markdown(f"<h3 style='margin-top:10px'>{res['Icone']} {res['Status']}</h3>", unsafe_allow_html=True)
-
-            st.write("")
-            
-            # Cards de Métricas (Breakdown)
-            mc1, mc2, mc3 = st.columns(3)
-            mc1.metric("Técnico", f"{res['Tec']}%")
-            mc2.metric("Relacionamento", f"{res['Int']}%")
-            nps_display = str(res['NPS']) if res['NPS'] != "N/A" else "N/A"
-            mc3.metric("NPS", nps_display)
+        with c_gauge:
+            # Velocímetro (Gauge) substitui o número estático
+            with st.container(border=True):
+                st.markdown(f"<p style='text-align:center; margin-bottom:0'>Health Score Global</p>", unsafe_allow_html=True)
+                fig_gauge = create_gauge_chart(res['Score'])
+                st.plotly_chart(fig_gauge, use_container_width=True)
+                
+                # Métricas em linha abaixo do velocímetro
+                m1, m2, m3 = st.columns(3)
+                m1.metric("Técnico", f"{res['Tec']}%")
+                m2.metric("Relacion.", f"{res['Int']}%")
+                nps_display = str(res['NPS']) if res['NPS'] != "N/A" else "N/A"
+                m3.metric("NPS", nps_display)
 
         # Plano de Ação
         st.write("")
         with st.container(border=True):
-            st.markdown("### 📝 Diagnóstico & Ações Recomendadas")
+            st.markdown(f"### 📝 Diagnóstico: {res['Status']}")
             texto_acoes = ""
             for acao in res['Acoes']:
                 texto_acoes += f"{acao}\n\n"
@@ -372,7 +380,6 @@ if st.button("PROCESSAR ANÁLISE", type="primary"):
             elif res['Cor'] == 'orange': st.warning(texto_acoes, icon="⚠️")
             else: st.error(texto_acoes, icon="🚩")
 
-        # Salva
         nps_banco = res['NPS'] if res['NPS'] != "N/A" else ""
         dados_db = {
             "Data": datetime.now().strftime("%d/%m/%Y %H:%M"), "Cliente": nome, "Tier": tier, "Fase": fase,
