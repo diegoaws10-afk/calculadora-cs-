@@ -360,6 +360,7 @@ if st.button("PROCESSAR ANÁLISE", type="primary"):
     if not nome:
         st.toast("Preencha o nome do cliente.", icon="⚠️")
     else:
+        # 1. Barra de Progresso
         progress_text = "Gerando diagnóstico..."
         my_bar = st.progress(0, text=progress_text)
         for percent_complete in range(100):
@@ -367,13 +368,19 @@ if st.button("PROCESSAR ANÁLISE", type="primary"):
             my_bar.progress(percent_complete + 1, text=progress_text)
         my_bar.empty()
 
-        fase_map = {'Onboarding': 'Onboarding (0-6m)', 'Adoção': 'Adoção (6-24m)', 'Retenção': 'Retenção (+2 anos)'}
-        modelo = CustomerHealthModel()
-        inputs = {'tier': tier, 'fase': fase_map[fase], 'local': local, 'nps': nps_valor, 'criados': c_in, 'encerrados': c_out, 'sla': sla, 'visitas': visitas, 'book': book, 'qbr_realizado': qbr_realizado, 'online': online, 'nome': nome}
-        res = modelo.calcular(inputs)
+        # 2. Cálculo
+        try:
+            fase_map = {'Onboarding': 'Onboarding (0-6m)', 'Adoção': 'Adoção (6-24m)', 'Retenção': 'Retenção (+2 anos)'}
+            modelo = CustomerHealthModel()
+            inputs = {'tier': tier, 'fase': fase_map[fase], 'local': local, 'nps': nps_valor, 'criados': c_in, 'encerrados': c_out, 'sla': sla, 'visitas': visitas, 'book': book, 'qbr_realizado': qbr_realizado, 'online': online, 'nome': nome}
+            res = modelo.calcular(inputs)
+        except Exception as e:
+            st.error(f"Erro no Cálculo: {e}")
+            st.stop()
         
         st.markdown("---")
         
+        # 3. Desenho dos Gráficos
         c_radar, c_gauge = st.columns([1, 1.3])
         with c_radar:
             with st.container(border=True):
@@ -392,6 +399,49 @@ if st.button("PROCESSAR ANÁLISE", type="primary"):
                 nps_display = str(res['NPS']) if res['NPS'] != "N/A" else "N/A"
                 m3.metric("NPS", nps_display)
 
+        # 4. Diagnóstico (AQUI ESTAVA O POSSÍVEL ERRO DE FLUXO)
         st.write("")
+        st.markdown("### 📋 Relatório de Diagnóstico") # Debug visual
+        
         with st.container(border=True):
-            st.markdown(f"### 📋 Relatório de Diagnóstico")
+            # Verifica se as chaves existem antes de imprimir
+            estrat = res.get('Estrategia', 'Erro ao gerar estratégia')
+            acoes_list = res.get('Acoes', [])
+
+            if res['Cor'] == 'green': st.success(estrat, icon="✅")
+            elif res['Cor'] == 'orange': st.warning(estrat, icon="⚠️")
+            else: st.error(estrat, icon="🚨")
+            
+            st.write("")
+            st.markdown("**Ações Táticas Sugeridas:**")
+            if not acoes_list:
+                st.info("Nenhuma ação específica gerada.")
+            for acao in acoes_list:
+                st.markdown(f"""<div style="background-color:rgba(255,255,255,0.05); padding:10px; border-radius:5px; margin-bottom:5px; border-left: 3px solid #3b82f6;">{acao}</div>""", unsafe_allow_html=True)
+
+        # 5. Salvamento no Banco
+        st.write("💾 Salvando dados...") # Feedback visual temporário
+        
+        nps_banco = res['NPS'] if res['NPS'] != "N/A" else ""
+        str_acoes = "\n".join([f"- {a}" for a in res.get('Acoes', [])])
+        playbook_completo = f"{res.get('Estrategia', '')}\n\n[AÇÕES SUGERIDAS]\n{str_acoes}"
+        
+        dados_db = {
+            "Data": datetime.now().strftime("%d/%m/%Y %H:%M"), 
+            "Cliente": nome, 
+            "Tier": tier, 
+            "Fase": fase,
+            "Local": local, 
+            "Score": res['Score'], 
+            "Status": res['Status'], 
+            "Técnico": res['Tec'], 
+            "Interação": res['Int'], 
+            "NPS": nps_banco, 
+            "Responsável": st.session_state.get('user_logado', 'Admin'), 
+            "Playbook": playbook_completo
+        }
+        
+        if salvar_no_banco(dados_db):
+            st.toast("Sucesso! Análise salva no banco.", icon="✅")
+        else:
+            st.error("Erro ao conectar com a planilha. Verifique os Secrets.")
