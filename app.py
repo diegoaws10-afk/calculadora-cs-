@@ -80,25 +80,30 @@ def check_authentication():
 
     with c_centro:
         with st.container(border=True):
-            st.markdown("<h1 style='text-align: center; margin-bottom: 0;'>STRATI</h1>", unsafe_allow_html=True)
+            # --- RECUPERANDO A IMAGEM DO LOGO ---
+            if os.path.exists("strati_logo.png"):
+                st.image("strati_logo.png", use_column_width=True)
+            elif os.path.exists("logo.png"):
+                st.image("logo.png", use_column_width=True)
+            else:
+                st.markdown("<h1 style='text-align: center; margin-bottom: 0;'>STRATI</h1>", unsafe_allow_html=True)
+            # ------------------------------------
+            
             st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 25px;'>Intelligence Control Center</p>", unsafe_allow_html=True)
             
             with st.form("login_form"):
                 username = st.text_input("Usuário", placeholder="Ex: nome_cs")
                 password = st.text_input("Senha", type="password", placeholder="••••••••")
-                # Alterei o placeholder para avisar a equipe que eles podem ignorar isso
                 token_mfa = st.text_input("Token MFA", placeholder="6 dígitos (Deixe em branco se não for Admin)") 
                 
                 submit = st.form_submit_button("ACESSAR SISTEMA")
                 
                 if submit:
-                    # 1. Verifica se usuário e senha batem com os Secrets
                     if username in st.secrets["passwords"] and password == st.secrets["passwords"][username]:
                         
-                        # Defina aqui qual é a string exata do seu usuário admin
+                        # Lembre-se de colocar aqui o seu usuário exato do Secrets
                         USUARIO_ADMIN = "diego_admin" 
-
-                        # 2. Se for você (Admin), exige o MFA
+                        
                         if username == USUARIO_ADMIN:
                             secret_key = st.secrets["mfa"]["secret_key"]
                             totp = pyotp.TOTP(secret_key)
@@ -111,7 +116,6 @@ def check_authentication():
                             else: 
                                 st.error("MFA incorreto. Acesso negado.")
                         
-                        # 3. Se for alguém do time, libera direto sem checar o MFA
                         else:
                             st.session_state["authenticated"] = True
                             st.session_state["user_logado"] = username
@@ -124,8 +128,7 @@ def check_authentication():
     return False
 
 if not check_authentication():
-    st.stop()
-# ==================================================
+    st.stop()# ==================================================
 # 💾 BANCO DE DADOS
 # ==================================================
 def salvar_no_banco(dados):
