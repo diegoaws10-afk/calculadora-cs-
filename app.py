@@ -80,14 +80,13 @@ def check_authentication():
 
     with c_centro:
         with st.container(border=True):
-            # --- RECUPERANDO A IMAGEM DO LOGO ---
+            # Recuperando a Imagem do Logo
             if os.path.exists("strati_logo.png"):
                 st.image("strati_logo.png", use_column_width=True)
             elif os.path.exists("logo.png"):
                 st.image("logo.png", use_column_width=True)
             else:
                 st.markdown("<h1 style='text-align: center; margin-bottom: 0;'>STRATI</h1>", unsafe_allow_html=True)
-            # ------------------------------------
             
             st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 25px;'>Intelligence Control Center</p>", unsafe_allow_html=True)
             
@@ -101,7 +100,6 @@ def check_authentication():
                 if submit:
                     if username in st.secrets["passwords"] and password == st.secrets["passwords"][username]:
                         
-                        # Lembre-se de colocar aqui o seu usuário exato do Secrets
                         USUARIO_ADMIN = "diego_admin" 
                         
                         if username == USUARIO_ADMIN:
@@ -115,7 +113,6 @@ def check_authentication():
                                 st.rerun()
                             else: 
                                 st.error("MFA incorreto. Acesso negado.")
-                        
                         else:
                             st.session_state["authenticated"] = True
                             st.session_state["user_logado"] = username
@@ -128,7 +125,9 @@ def check_authentication():
     return False
 
 if not check_authentication():
-    st.stop()# ==================================================
+    st.stop()
+
+# ==================================================
 # 💾 BANCO DE DADOS
 # ==================================================
 def salvar_no_banco(dados):
@@ -211,91 +210,4 @@ class CustomerHealthModel:
         cor = "red" if risco_total > 60 else ("orange" if risco_total > 40 else "green")
         estrategia, acoes = self.gerar_playbook_matriz(risco_total, potencial_total, dados['nome'])
             
-        return {"Risco": round(risco_total, 1), "Potencial": round(potencial_total, 1), "Cor": cor, "Servico": int(score_servico), "Estrategia": estrategia, "Acoes": acoes}
-
-# ==================================================
-# 🖥️ UI PRINCIPAL
-# ==================================================
-with st.sidebar:
-    st.markdown("<h1>STRATI</h1>", unsafe_allow_html=True)
-    if st.button("🚪 Sair"): st.session_state.clear(); st.rerun()
-    st.write("---")
-    st.markdown("### 1. Perfil do Cliente")
-    nome = st.text_input("Nome da Empresa", placeholder="Ex: Strati Tecnologia")
-    local = st.radio("Localização", ["SP (Local)", "Fora de SP (Remoto)"], horizontal=True)
-    
-    fase = st.selectbox("Fase da Jornada", ['Onboarding', 'Adoção', 'Retenção'])
-    if fase == 'Onboarding':
-        st.info("🎯 **0-6 meses:** Foco em implementação, treinamento e entrega do primeiro valor.")
-    elif fase == 'Adoção':
-        st.info("⚙️ **6-24 meses:** Foco em uso recorrente, estabilidade técnica e maturidade.")
-    else:
-        st.info("🤝 **+24 meses:** Parceria de longo prazo, foco em renovação e novos negócios.")
-
-st.markdown("<h1>🛡️ Calculadora <span style='color:#3b82f6'>Potencial vs. Risco</span></h1>", unsafe_allow_html=True)
-
-# RISCO
-st.markdown("### 📉 Avaliação de Risco")
-r1, r2, r3 = st.columns(3)
-with r1:
-    with st.container(border=True):
-        st.markdown("**Uso do Serviço (Chamados)**")
-        cenario_chamados = st.selectbox("Volume de Chamados", ["Adequado / Estável", "Muito Baixo (Silêncio/Shadow IT)", "Alto (Instabilidade/Atrito)", "Crítico (Incidentes Graves)"])
-        sla_atingido = st.slider("SLA no Mês (%)", 50, 100, 98)
-with r2:
-    with st.container(border=True):
-        st.markdown("**Engajamento**")
-        visitas = st.slider("Visitas Presenciais", 0, 5, 1) if local == "SP (Local)" else 0
-        online = st.slider("Calls Online", 0, 10, 2)
-        book = st.selectbox("Book de Serviços", ["Apresentado", "Enviado", "Não realizado"])
-        qbr_realizado = st.radio("QBR Apresentado?", ["Sim", "Não"], horizontal=True)
-with r3:
-    with st.container(border=True):
-        st.markdown("**Satisfação**")
-        tem_nps = st.toggle("NPS recente?", value=True)
-        nps_valor = st.slider("Nota NPS (0-10)", 0, 10, 9) if tem_nps else None
-
-st.write("---")
-
-# POTENCIAL COM DESCRIÇÕES ABAIXO
-st.markdown("### 🚀 Avaliação de Potencial")
-p1, p2, p3 = st.columns(3)
-
-with p1:
-    receita = st.slider("Receita (0-100)", 0, 100, 50)
-    st.caption("**Representatividade financeira.** Atribua 100 para o ticket mensal (MRR) ideal ou contas estratégicas da sua carteira.")
-
-with p2:
-    fit = st.slider("Fit do Cliente (0-100)", 0, 100, 70)
-    st.caption("**Alinhamento operacional.** O quanto o cliente segue nossos padrões técnicos sem exigir exceções excessivas.")
-
-with p3:
-    crescimento = st.slider("Expansão (0-100)", 0, 100, 30)
-    st.caption("**Oportunidade de novos negócios.** Mapeie se há serviços do portfólio (Segurança, Backup, etc) que ele ainda não contratou.")
-
-st.write("")
-
-if st.button("PROCESSAR RECLASSIFICAÇÃO", type="primary"):
-    if not nome: st.toast("Preencha o nome do cliente.", icon="⚠️")
-    else:
-        modelo = CustomerHealthModel()
-        res = modelo.calcular({'fase': fase, 'local': local, 'nps': nps_valor, 'visitas': visitas, 'book': book, 'qbr_realizado': qbr_realizado, 'online': online, 'nome': nome, 'cenario_chamados': cenario_chamados, 'sla_atingido': sla_atingido, 'receita': receita, 'fit': fit, 'crescimento': crescimento})
-        
-        c_res1, c_res2 = st.columns(2)
-        with c_res1:
-            st.markdown("<h3 style='text-align:center'>Risco</h3>", unsafe_allow_html=True)
-            st.plotly_chart(create_gauge_chart(res['Risco']), use_container_width=True)
-        with c_res2:
-            st.markdown("<h3 style='text-align:center'>Potencial</h3>", unsafe_allow_html=True)
-            st.plotly_chart(create_gauge_chart(res['Potencial']), use_container_width=True)
-
-        st.markdown("### 📋 Diagnóstico") 
-        if res['Cor'] == 'green': st.success(res['Estrategia'], icon="✅")
-        elif res['Cor'] == 'orange': st.warning(res['Estrategia'], icon="⚠️")
-        else: st.error(res['Estrategia'], icon="🚨")
-        
-        for acao in res['Acoes']:
-            st.markdown(f"""<div style="background-color:rgba(255,255,255,0.05); padding:10px; border-radius:5px; margin-bottom:5px; border-left: 3px solid #3b82f6;">{acao}</div>""", unsafe_allow_html=True)
-
-        salvar_no_banco({"Data": datetime.now().strftime("%d/%m/%Y"), "Cliente": nome, "Fase": fase, "Risco": res['Risco'], "Potencial": res['Potencial'], "Responsável": st.session_state.get('user_logado', 'Admin')})
-        st.toast("Análise salva!", icon="✅")
+        return {"Risco": round(risco_total, 1), "Potencial": round(potencial_total, 1), "Cor": cor, "Servico": int(score_servico), "Estrategia": estrategia, "Acoes
