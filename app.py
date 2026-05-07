@@ -40,14 +40,6 @@ def load_css():
 
         h1, h2, h3 { font-family: 'Montserrat', sans-serif !important; color: #ffffff !important; }
 
-        .stTextInput input {
-            background-color: rgba(15, 23, 42, 0.6) !important;
-            border: 1px solid rgba(148, 163, 184, 0.2) !important;
-            color: white !important;
-            border-radius: 12px !important;
-            padding: 12px !important;
-        }
-
         div.stButton > button:first-child {
             background: linear-gradient(90deg, #2563eb 0%, #1d4ed8 100%);
             color: white;
@@ -179,7 +171,6 @@ class CustomerHealthModel:
     def calcular(self, dados):
         regras = self.regras_fase[dados['fase']]
         
-        # Engajamento
         if dados['local'] == "SP (Local)":
             meta = regras['meta_visitas']
             score_presenca = 100 if meta == 0 else min((dados['visitas']/meta)*100, 100.0)
@@ -190,8 +181,6 @@ class CustomerHealthModel:
 
         score_engajamento = min((score_presenca*0.5) + ((100 if dados['qbr_realizado'] == 'Sim' else 0)*0.25) + ((100 if dados['book']=='Apresentado' else 0)*0.25) + bonus_online, 100.0)
         score_satisfacao = (dados['nps'] * 10) if dados['nps'] is not None else 50
-
-        # Saúde MSP
         score_volume = {"Adequado / Estável": 100, "Alto (Instabilidade/Atrito)": 50, "Muito Baixo (Silêncio/Shadow IT)": 30}.get(dados['cenario_chamados'], 10)
         score_servico = (score_volume * 0.60) + (dados['sla_atingido'] * 0.40)
 
@@ -214,9 +203,7 @@ with st.sidebar:
     nome = st.text_input("Nome da Empresa", placeholder="Ex: Strati Tecnologia")
     local = st.radio("Localização", ["SP (Local)", "Fora de SP (Remoto)"], horizontal=True)
     
-    # SELETOR DE FASE COM OBSERVAÇÃO DINÂMICA
     fase = st.selectbox("Fase da Jornada", ['Onboarding', 'Adoção', 'Retenção'])
-    
     if fase == 'Onboarding':
         st.info("🎯 **0-6 meses:** Foco em implementação, treinamento e entrega do primeiro valor.")
     elif fase == 'Adoção':
@@ -226,6 +213,8 @@ with st.sidebar:
 
 st.markdown("<h1>🛡️ Calculadora <span style='color:#3b82f6'>Potencial vs. Risco</span></h1>", unsafe_allow_html=True)
 
+# RISCO
+st.markdown("### 📉 Avaliação de Risco")
 r1, r2, r3 = st.columns(3)
 with r1:
     with st.container(border=True):
@@ -246,11 +235,24 @@ with r3:
         nps_valor = st.slider("Nota NPS (0-10)", 0, 10, 9) if tem_nps else None
 
 st.write("---")
+
+# POTENCIAL COM DESCRIÇÕES ABAIXO
 st.markdown("### 🚀 Avaliação de Potencial")
 p1, p2, p3 = st.columns(3)
-with p1: receita = st.slider("Receita (0-100)", 0, 100, 50)
-with p2: fit = st.slider("Fit do Cliente (0-100)", 0, 100, 70)
-with p3: crescimento = st.slider("Expansão (0-100)", 0, 100, 30)
+
+with p1:
+    receita = st.slider("Receita (0-100)", 0, 100, 50)
+    st.caption("**Representatividade financeira.** Atribua 100 para o ticket mensal (MRR) ideal ou contas estratégicas da sua carteira.")
+
+with p2:
+    fit = st.slider("Fit do Cliente (0-100)", 0, 100, 70)
+    st.caption("**Alinhamento operacional.** O quanto o cliente segue nossos padrões técnicos sem exigir exceções excessivas.")
+
+with p3:
+    crescimento = st.slider("Expansão (0-100)", 0, 100, 30)
+    st.caption("**Oportunidade de novos negócios.** Mapeie se há serviços do portfólio (Segurança, Backup, etc) que ele ainda não contratou.")
+
+st.write("")
 
 if st.button("PROCESSAR RECLASSIFICAÇÃO", type="primary"):
     if not nome: st.toast("Preencha o nome do cliente.", icon="⚠️")
