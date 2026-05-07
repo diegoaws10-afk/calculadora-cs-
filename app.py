@@ -186,7 +186,7 @@ def create_gauge_chart(score):
     return fig
 
 # ==================================================
-# 🧠 LÓGICA CS (MATRIZ POTENCIAL X RISCO)
+# 🧠 LÓGICA CS (MATRIZ POTENCIAL X RISCO - MSP)
 # ==================================================
 class CustomerHealthModel:
     def __init__(self):
@@ -202,24 +202,26 @@ class CustomerHealthModel:
         
         # Cruzamento da Matriz
         if nivel_risco > 60 and nivel_potencial > 60:
-            estrategia = f"🔥 ALTO POTENCIAL EM RISCO: {nome_cliente} pode trazer muita receita, mas está frustrado ou sem engajamento."
-            acoes_taticas.extend(["Envolver liderança (Sponsor to Sponsor)", "Montar plano de reversão imediato focando na dor principal", "Pausar qualquer tentativa de upsell até estabilizar o uso"])
+            estrategia = f"🔥 ALTO POTENCIAL EM RISCO: {nome_cliente} pode trazer muita receita, mas apresenta risco técnico/engajamento."
+            acoes_taticas.extend(["Envolver liderança (Sponsor to Sponsor)", "Montar plano de reversão focado em estabilizar o serviço", "Pausar qualquer tentativa de upsell até melhorar SLA e NPS"])
         elif nivel_risco > 60 and nivel_potencial <= 60:
-            estrategia = f"⚠️ RISCO COM BAIXO POTENCIAL: {nome_cliente} exige esforço, mas com baixo retorno financeiro."
+            estrategia = f"⚠️ RISCO COM BAIXO POTENCIAL: {nome_cliente} exige alto esforço de suporte com baixo retorno financeiro."
             acoes_taticas.extend(["Avaliar se o cliente tem fit de longo prazo", "Automatizar o atendimento para reduzir Custo de Servir", "Aplicar reajuste de preço na renovação, se aplicável"])
         elif nivel_risco <= 60 and nivel_potencial > 60:
-            estrategia = f"🚀 OPORTUNIDADE CLARA: {nome_cliente} está saudável e pronto para expansão."
-            acoes_taticas.extend(["Apresentar novas features ou serviços adicionais", "Mapear áreas correlatas para cross-sell", "Solicitar indicação ou caso de sucesso"])
+            estrategia = f"🚀 OPORTUNIDADE CLARA: {nome_cliente} possui serviço estável e alto potencial de expansão."
+            acoes_taticas.extend(["Apresentar novos serviços gerenciados (Cross-sell)", "Mapear expansão de infraestrutura ou licenciamento (Upsell)", "Solicitar caso de sucesso/indicação"])
         else:
-            estrategia = f"🛡️ MANUTENÇÃO ESTÁVEL: {nome_cliente} está saudável, mas com baixo potencial de expansão."
-            acoes_taticas.extend(["Manter cadência de relacionamento padrão", "Garantir a renovação automática", "Focar na entrega de valor contínua"])
+            estrategia = f"🛡️ MANUTENÇÃO ESTÁVEL: {nome_cliente} possui operação saudável, mas com baixo teto de crescimento atual."
+            acoes_taticas.extend(["Manter cadência de relacionamento padrão (QBRs)", "Garantir a renovação contratual automática", "Focar na entrega contínua de valor (SLA)"])
 
         return estrategia, acoes_taticas
 
     def calcular(self, dados):
         regras = self.regras_fase[dados['fase']]
         
-        # 1. CÁLCULO DE RISCO (Uso 40%, Engajamento 30%, Satisfação 30%)
+        # 1. CÁLCULO DE RISCO (Serviço/Operação 40%, Engajamento 30%, Satisfação 30%)
+        
+        # --- Engajamento ---
         if dados['local'] == "SP (Local)":
             meta = regras['meta_visitas']
             score_presenca = 100 if meta == 0 else min((dados['visitas']/meta)*100, 100.0)
@@ -234,6 +236,7 @@ class CustomerHealthModel:
         score_engajamento = (score_presenca*0.5) + ((book_pts + qbr_pts)/2*0.5) + bonus_online
         score_engajamento = min(score_engajamento, 100.0)
 
+        # --- Satisfação (NPS) ---
         if dados['nps'] is None:
             score_satisfacao = 50
             msg_nps = "N/A"
@@ -241,11 +244,24 @@ class CustomerHealthModel:
             score_satisfacao = dados['nps'] * 10
             msg_nps = dados['nps']
 
+        # --- Saúde do Serviço (Modelo MSP) ---
+        if dados['cenario_chamados'] == "Adequado / Estável": 
+            score_volume = 100
+        elif dados['cenario_chamados'] == "Alto (Instabilidade/Atrito)": 
+            score_volume = 50
+        elif dados['cenario_chamados'] == "Muito Baixo (Silêncio/Shadow IT)": 
+            score_volume = 30
+        else: # Crítico (Incidentes Graves)
+            score_volume = 10 
+            
+        score_servico = (score_volume * 0.60) + (dados['sla_atingido'] * 0.40)
+
+        # --- Fatias de Risco (Invertendo os scores positivos) ---
         risco_engajamento = 100 - score_engajamento
         risco_satisfacao = 100 - score_satisfacao
-        risco_uso = 100 - dados['uso']
+        risco_servico = 100 - score_servico 
 
-        risco_total = (risco_uso * 0.40) + (risco_engajamento * 0.30) + (risco_satisfacao * 0.30)
+        risco_total = (risco_servico * 0.40) + (risco_engajamento * 0.30) + (risco_satisfacao * 0.30)
 
         # 2. CÁLCULO DE POTENCIAL (Receita 40%, Fit 30%, Crescimento 30%)
         potencial_total = (dados['receita'] * 0.40) + (dados['fit'] * 0.30) + (dados['crescimento'] * 0.30)
@@ -261,7 +277,7 @@ class CustomerHealthModel:
             "Potencial": round(potencial_total, 1),
             "Cor": cor, "Icone": icone,
             "Engajamento": int(score_engajamento), 
-            "Uso": int(dados['uso']), 
+            "Servico": int(score_servico), 
             "NPS": msg_nps, 
             "Estrategia": estrategia, "Acoes": acoes
         }
@@ -290,12 +306,22 @@ st.markdown("<h1>🛡️ Calculadora de <span style='color:#3b82f6'>Potencial vs
 st.markdown(f"<p style='color:#94a3b8; font-size:1.1rem'>Análise de Carteira: <b>{nome if nome else 'Novo Cliente'}</b></p>", unsafe_allow_html=True)
 
 # Linha 1: Fatores de Risco
-st.markdown("### 📉 Avaliação de Risco")
+st.markdown("### 📉 Avaliação de Risco (Operacional & Relacionamento)")
 r1, r2, r3 = st.columns(3)
 with r1:
     with st.container(border=True):
-        st.markdown("**Uso do Produto**")
-        uso = st.slider("Taxa de Adoção (%)", 0, 100, 50, help="Qual a aderência do cliente à plataforma/serviço?")
+        st.markdown("**Uso do Serviço (Chamados)**")
+        cenario_chamados = st.selectbox(
+            "Volume de Chamados (Últimos 30 dias)",
+            [
+                "Adequado / Estável", 
+                "Muito Baixo (Silêncio/Shadow IT)", 
+                "Alto (Instabilidade/Atrito)", 
+                "Crítico (Incidentes Graves)"
+            ],
+            help="Avalie o comportamento de abertura de tickets do cliente."
+        )
+        sla_atingido = st.slider("SLA Atingido no Mês (%)", 50, 100, 98)
 with r2:
     with st.container(border=True):
         st.markdown("**Engajamento**")
@@ -317,7 +343,7 @@ with r3:
 st.write("---")
 
 # Linha 2: Fatores de Potencial
-st.markdown("### 🚀 Avaliação de Potencial")
+st.markdown("### 🚀 Avaliação de Potencial (Financeiro & Estratégico)")
 p1, p2, p3 = st.columns(3)
 with p1:
     with st.container(border=True):
@@ -335,7 +361,7 @@ if st.button("PROCESSAR RECLASSIFICAÇÃO", type="primary"):
     if not nome:
         st.toast("Preencha o nome do cliente.", icon="⚠️")
     else:
-        progress_text = "Calculando Matriz..."
+        progress_text = "Calculando Matriz MSP..."
         my_bar = st.progress(0, text=progress_text)
         for percent_complete in range(100):
             time.sleep(0.005)
@@ -348,7 +374,8 @@ if st.button("PROCESSAR RECLASSIFICAÇÃO", type="primary"):
             inputs = {
                 'fase': fase_map[fase], 'local': local, 'nps': nps_valor, 'visitas': visitas, 
                 'book': book, 'qbr_realizado': qbr_realizado, 'online': online, 'nome': nome,
-                'uso': uso, 'receita': receita, 'fit': fit, 'crescimento': crescimento
+                'cenario_chamados': cenario_chamados, 'sla_atingido': sla_atingido,
+                'receita': receita, 'fit': fit, 'crescimento': crescimento
             }
             res = modelo.calcular(inputs)
         except Exception as e:
@@ -403,7 +430,7 @@ if st.button("PROCESSAR RECLASSIFICAÇÃO", type="primary"):
             "Risco (%)": res['Risco'], 
             "Potencial (%)": res['Potencial'],
             "Engajamento": res['Engajamento'], 
-            "Uso": res['Uso'], 
+            "Serviço (Saúde)": res['Servico'], 
             "NPS": nps_banco, 
             "Responsável": st.session_state.get('user_logado', 'Admin'), 
             "Playbook": playbook_completo
