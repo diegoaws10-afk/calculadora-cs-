@@ -67,7 +67,7 @@ def load_css():
 load_css()
 
 # ==================================================
-# 🔐 SEGURANÇA (LOGIN)
+# 🔐 SEGURANÇA (LOGIN MULTI-PERFIL)
 # ==================================================
 def check_authentication():
     if st.session_state.get("authenticated", False):
@@ -84,29 +84,47 @@ def check_authentication():
             st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 25px;'>Intelligence Control Center</p>", unsafe_allow_html=True)
             
             with st.form("login_form"):
-                username = st.text_input("Usuário", placeholder="Usuário corporativo")
+                username = st.text_input("Usuário", placeholder="Ex: nome_cs")
                 password = st.text_input("Senha", type="password", placeholder="••••••••")
-                token_mfa = st.text_input("Token MFA", placeholder="6 dígitos") 
+                # Alterei o placeholder para avisar a equipe que eles podem ignorar isso
+                token_mfa = st.text_input("Token MFA", placeholder="6 dígitos (Deixe em branco se não for Admin)") 
                 
                 submit = st.form_submit_button("ACESSAR SISTEMA")
                 
                 if submit:
+                    # 1. Verifica se usuário e senha batem com os Secrets
                     if username in st.secrets["passwords"] and password == st.secrets["passwords"][username]:
-                        secret_key = st.secrets["mfa"]["secret_key"]
-                        totp = pyotp.TOTP(secret_key)
-                        if totp.verify(token_mfa.replace(" ", "")):
+                        
+                        # Defina aqui qual é a string exata do seu usuário admin
+                        USUARIO_ADMIN = "diego_admin" 
+
+                        # 2. Se for você (Admin), exige o MFA
+                        if username == USUARIO_ADMIN:
+                            secret_key = st.secrets["mfa"]["secret_key"]
+                            totp = pyotp.TOTP(secret_key)
+                            if totp.verify(token_mfa.replace(" ", "")):
+                                st.session_state["authenticated"] = True
+                                st.session_state["user_logado"] = username
+                                st.toast("Acesso Autorizado (Admin)!", icon="🛡️")
+                                time.sleep(0.5)
+                                st.rerun()
+                            else: 
+                                st.error("MFA incorreto. Acesso negado.")
+                        
+                        # 3. Se for alguém do time, libera direto sem checar o MFA
+                        else:
                             st.session_state["authenticated"] = True
                             st.session_state["user_logado"] = username
-                            st.toast("Acesso Autorizado!", icon="🚀")
+                            st.toast(f"Bem-vindo(a), {username}!", icon="🚀")
                             time.sleep(0.5)
                             st.rerun()
-                        else: st.error("MFA incorreto.")
-                    else: st.error("Credenciais inválidas.")
+                            
+                    else: 
+                        st.error("Credenciais inválidas.")
     return False
 
 if not check_authentication():
     st.stop()
-
 # ==================================================
 # 💾 BANCO DE DADOS
 # ==================================================
