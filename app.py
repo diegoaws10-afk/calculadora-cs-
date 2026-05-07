@@ -28,7 +28,6 @@ def load_css():
 
         .stApp {
             font-family: 'Inter', sans-serif;
-            /* Fundo usando os cinzas da paleta: #262626 -> #000000 */
             background: linear-gradient(-45deg, #1A1A1A, #000000, #1A1A1A, #262626);
             background-size: 400% 400%;
             animation: gradient 15s ease infinite;
@@ -37,7 +36,7 @@ def load_css():
 
         /* Sidebar (FUNDO AZUL Escuro) */
         [data-testid="stSidebar"] {
-            background-color: rgba(11, 13, 25, 0.95); /* #0B0D19 com opacidade */
+            background-color: rgba(11, 13, 25, 0.95); 
             border-right: 1px solid #262626;
             backdrop-filter: blur(10px);
         }
@@ -47,14 +46,13 @@ def load_css():
 
         /* ESTILO ESPECÍFICO DO LOGIN */
         .stVerticalBlockBorderWrapper {
-            /* Container Cards usando azul escuro da paleta: #1A142E */
             border-radius: 16px;
             background-color: rgba(26, 20, 46, 0.5) !important;
             border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
-        /* Inputs Modernos (Foco com acento Azul Guardian: #189CD8) */
-        .stTextInput input, .stNumberInput input, .stSlider > div > div > div > div {
+        /* Inputs Modernos (Texto e Números) */
+        .stTextInput input, .stNumberInput input {
             background-color: rgba(0, 0, 0, 0.4) !important;
             border: 1px solid rgba(148, 163, 184, 0.2) !important;
             color: white !important;
@@ -64,6 +62,27 @@ def load_css():
         .stTextInput input:focus, .stNumberInput input:focus {
             border-color: #189CD8 !important; /* Azul Guardian */
             box-shadow: 0 0 0 2px rgba(24, 156, 216, 0.2) !important;
+        }
+
+        /* ========================================= */
+        /* CUSTOMIZAÇÃO DOS SLIDERS (Remover Vermelho) */
+        /* ========================================= */
+        /* Marcador (Bolinha) do Slider */
+        div[data-baseweb="slider"] div[role="slider"] {
+            background-color: #189CD8 !important; /* Azul Guardian */
+            border: 2px solid #ffffff !important;
+        }
+        /* Marcador com foco */
+        div[data-baseweb="slider"] div[role="slider"]:focus {
+            box-shadow: 0 0 0 0.2rem rgba(24, 156, 216, 0.4) !important;
+        }
+        /* Barra preenchida à esquerda do marcador */
+        div[data-baseweb="slider"] > div > div > div:first-child {
+            background-color: #189CD8 !important; /* Azul Guardian */
+        }
+        /* Barra não preenchida à direita do marcador */
+        div[data-baseweb="slider"] > div > div > div:last-child {
+            background-color: rgba(255, 255, 255, 0.1) !important;
         }
 
         /* Botão Principal (LARANJA STRATI degradê: #F6A41A -> #ED701B) */
@@ -78,7 +97,7 @@ def load_css():
             letter-spacing: 0.5px;
             width: 100%;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(237, 112, 27, 0.4); /* Sombra Laranja deep */
+            box-shadow: 0 4px 15px rgba(237, 112, 27, 0.4);
         }
         div.stButton > button:first-child:hover {
             transform: translateY(-2px) scale(1.02);
@@ -89,7 +108,7 @@ def load_css():
         #MainMenu {visibility: hidden;}
         footer {visibility: hidden;}
         
-        /* Divs de ação sugeridas (Borda esquerda Laranja Strati: #ED701B) */
+        /* Divs de ação sugeridas */
         [data-testid="stAlert"] {
             border-left: 3px solid #ED701B !important;
         }
@@ -119,7 +138,6 @@ def check_authentication():
 
     with c_centro:
         with st.container(border=True):
-            # Recuperando a Imagem do Logo Strati
             if os.path.exists("strati_logo.png"):
                 st.image("strati_logo.png", use_column_width=True)
             elif os.path.exists("logo.png"):
@@ -132,18 +150,15 @@ def check_authentication():
             with st.form("login_form"):
                 username = st.text_input("Usuário", placeholder="Ex: nome_cs")
                 password = st.text_input("Senha", type="password", placeholder="••••••••")
-                # Placeholder ajustado para não-admin
-                token_mfa = st.text_input("Token MFA", placeholder="6 dígitos (Deixe em branco se não for Admin)") 
+                token_mfa = st.text_input("Token MFA", placeholder="6 dígitos (Deixar em branco se não for Admin)") 
                 
                 submit = st.form_submit_button("ACESSAR SISTEMA")
                 
                 if submit:
                     if username in st.secrets["passwords"] and password == st.secrets["passwords"][username]:
                         
-                        # Coloque aqui o seu usuário exato do Secrets que precisa de MFA
                         USUARIO_ADMIN = "diego_admin" 
                         
-                        # Se for você (Admin), exige o MFA
                         if username == USUARIO_ADMIN:
                             secret_key = st.secrets["mfa"]["secret_key"]
                             totp = pyotp.TOTP(secret_key)
@@ -155,8 +170,6 @@ def check_authentication():
                                 st.rerun()
                             else: 
                                 st.error("MFA incorreto. Acesso negado.")
-                        
-                        # Se for alguém do time, libera direto
                         else:
                             st.session_state["authenticated"] = True
                             st.session_state["user_logado"] = username
@@ -190,8 +203,7 @@ def salvar_no_banco(dados):
 # 📊 GRÁFICOS (ADAPTADO CORES STRATI)
 # ==================================================
 def create_gauge_chart(score):
-    # Cores funcionais e corporativas Strati
-    red_func = "#ef4444"      # Retido para Critical para clareza funcional
+    red_func = "#ef4444"      # Crítico
     orange_deep = "#ED701B"  # Strati Deep Orange
     green_work = "#95C11F"   # Digital Work Green
 
@@ -203,9 +215,9 @@ def create_gauge_chart(score):
             'bar': {'color': "rgba(255,255,255,0.3)"},
             'bgcolor': "rgba(0,0,0,0)", 'borderwidth': 0,
             'steps': [
-                {'range': [0, 60], 'color': red_func},        # Crítico
-                {'range': [60, 75], 'color': orange_deep},     # Atenção
-                {'range': [75, 100], 'color': green_work}       # Saudável
+                {'range': [0, 60], 'color': red_func},
+                {'range': [60, 75], 'color': orange_deep},
+                {'range': [75, 100], 'color': green_work}
             ],
             'threshold': {'line': {'color': "white", 'width': 4}, 'thickness': 0.75, 'value': score}
         }
@@ -228,7 +240,6 @@ class CustomerHealthModel:
         estrategia = ""
         acoes_taticas = []
         
-        # Cruzamento da Matriz
         if nivel_risco > 60 and nivel_potencial > 60:
             estrategia = f"🔥 ALTO POTENCIAL EM RISCO: {nome_cliente} pode trazer muita receita, mas apresenta risco técnico/engajamento."
             acoes_taticas.extend(["Envolver liderança", "Plano de estabilização imediata", "Pausar Upsell"])
@@ -246,8 +257,6 @@ class CustomerHealthModel:
 
     def calcular(self, dados):
         regras = self.regras_fase[dados['fase']]
-        
-        # 1. CÁLCULO DE RISCO (Operação 40%, Engajamento 30%, Satisfação 30%)
         
         # Engajamento
         if dados['local'] == "SP (Local)":
@@ -277,7 +286,7 @@ class CustomerHealthModel:
         # Risco Total
         risco_total = ((100 - score_servico) * 0.40) + ((100 - score_engajamento) * 0.30) + ((100 - score_satisfacao) * 0.30)
 
-        # 2. CÁLCULO DE POTENCIAL (Receita 40%, Fit 30%, Crescimento 30%)
+        # Potencial
         potencial_total = (dados['receita'] * 0.40) + (dados['fit'] * 0.30) + (dados['crescimento'] * 0.30)
 
         if risco_total > 60: cor, icone = "red", "🚨"
@@ -300,7 +309,6 @@ class CustomerHealthModel:
 # 🖥️ UI PRINCIPAL
 # ==================================================
 with st.sidebar:
-    # Recuperando Imagem Sidebar
     if os.path.exists("strati_logo.png"):
         st.image("strati_logo.png", use_column_width=True)
     elif os.path.exists("logo.png"):
@@ -315,20 +323,18 @@ with st.sidebar:
     nome = st.text_input("Nome da Empresa", placeholder="Ex: Strati Tecnologia")
     local = st.radio("Localização", ["SP (Local)", "Fora de SP (Remoto)"], horizontal=True)
     
-    # SELETOR DE FASE COM OBSERVAÇÃO DINÂMICA
     fase = st.selectbox("Fase da Jornada", ['Onboarding', 'Adoção', 'Retenção'])
     if fase == 'Onboarding':
-        st.info("🎯 **0-6 meses:** Foco em implementação, treinamento e entrega do primeiro valor técnico.")
+        st.info("🎯 **0-6 meses:** Foco em implementação, formação e entrega do primeiro valor técnico.")
     elif fase == 'Adoção':
         st.info("⚙️ **6-24 meses:** Foco em uso recorrente, estabilidade técnica e maturidade operacional.")
     else:
-        st.info("🤝 **+24 meses:** Parceria estratégica de longo prazo, foco em renovação e novos negócios.")
+        st.info("🤝 **+24 meses:** Parceria estratégica a longo prazo, foco em renovação e novos negócios.")
 
-# Título Principal com span Laranja Strati: #F6A41A
 st.markdown("<h1>🛡️ Calculadora CS <span style='color:#F6A41A'>Intelligence</span></h1>", unsafe_allow_html=True)
 st.markdown(f"<p style='color:#A6A6A6; font-size:1.1rem'>Análise de Carteira: <b>{nome if nome else 'Novo Cliente'}</b></p>", unsafe_allow_html=True)
 
-# Linha 1: Fatores de Risco
+# RISCO
 st.markdown("### 📉 Avaliação de Risco (Operacional & Relacionamento)")
 r1, r2, r3 = st.columns(3)
 with r1:
@@ -336,15 +342,8 @@ with r1:
         st.markdown("**Saúde do Serviço (Chamados & SLA)**")
         cenario_chamados = st.selectbox(
             "Volume de Chamados (Últimos 30 dias)",
-            [
-                "Adequado / Estável", 
-                "Muito Baixo (Silêncio/Shadow IT)", 
-                "Alto (Instabilidade/Atrito)", 
-                "Crítico (Incidentes Graves)"
-            ],
-            help="Avalie se o volume de tickets do cliente indica estabilidade ou problemas."
+            ["Adequado / Estável", "Muito Baixo (Silêncio/Shadow IT)", "Alto (Instabilidade/Atrito)", "Crítico (Incidentes Graves)"]
         )
-        # Slider padrão
         sla_atingido = st.slider("SLA Atingido no Mês (%)", 50, 100, 98)
 with r2:
     with st.container(border=True):
@@ -366,42 +365,41 @@ with r3:
 
 st.write("---")
 
-# Linha 2: Fatores de Potencial (Acentos visuais AZUL GUARDIAN: #189CD8 nas bordas)
+# POTENCIAL (COM TEXTOS DETALHADOS RESTAURADOS)
 st.markdown("### 🚀 Avaliação de Potencial (Financeiro & Estratégico)")
 p1, p2, p3 = st.columns(3)
+
 with p1:
     with st.container(border=True):
-        # Acento Laranja Strati suave no texto: #F6A41A
-        st.markdown("**Representatividade Financeira (MRR)**")
-        receita = st.slider("Volume Financeiro (Score 0-100)", 0, 100, 50, help="Representação financeira deste cliente na carteira.")
-        st.caption("**Notas altas:** Clientes Enterprise (Curva A). **Notas baixas:** Tickets mínimos.")
+        st.markdown("**Representatividade Financeira**")
+        receita = st.slider("Volume Financeiro (Score 0-100)", 0, 100, 50)
+        st.caption("**Curva ABC (MRR):**<br>• **80-100:** Contas estratégicas (Maior impacto).<br>• **40-79:** Contas médias.<br>• **0-39:** Contas de menor impacto financeiro.", unsafe_allow_html=True)
+
 with p2:
     with st.container(border=True):
-        st.markdown("**Fit Operacional (Stack Strati)**")
-        fit = st.slider("Alinhamento Técnico (Score 0-100)", 0, 100, 70, help="O quanto o cliente usa as tecnologias que dominamos.")
-        st.caption("**Notas altas:** Segue nossos padrões. **Notas baixas:** Exceções técnicas constantes.")
+        st.markdown("**Fit Operacional**")
+        fit = st.slider("Alinhamento Técnico (Score 0-100)", 0, 100, 70)
+        st.caption("**Alinhamento à Stack Strati:**<br> O quanto o cliente confia e segue os nossos padrões técnicos sem exigir inúmeras exceções no dia a dia.", unsafe_allow_html=True)
+
 with p3:
     with st.container(border=True):
         st.markdown("**Oportunidade de Novos Negócios**")
-        crescimento = st.slider("Expansão (Score 0-100)", 0, 100, 30, help="Espaço em branco para venda cruzada/upsell.")
-        st.caption("**Notas altas:** Tem potencial para contratar Guardian, Backup, Cloud, etc.")
+        crescimento = st.slider("Expansão (Score 0-100)", 0, 100, 30)
+        st.caption("**White Space (Venda Cruzada):**<br> Notas altas indicam que o cliente tem potencial para contratar outras soluções do nosso portfólio (Segurança, Backup, etc).", unsafe_allow_html=True)
 
 st.write("")
 
-# Botão principal já está estilizado no CSS degradê
 if st.button("PROCESSAR RECLASSIFICAÇÃO MSP", type="primary"):
     if not nome:
-        st.toast("Preencha o nome do cliente.", icon="⚠️")
+        st.toast("Preenche o nome do cliente.", icon="⚠️")
     else:
-        # Progresso animado
-        progress_text = "Calculando Matriz MSP Strati..."
+        progress_text = "A calcular a Matriz MSP Strati..."
         my_bar = st.progress(0, text=progress_text)
         for percent_complete in range(100):
             time.sleep(0.005)
             my_bar.progress(percent_complete + 1, text=progress_text)
         my_bar.empty()
 
-        # Cálculo
         try:
             fase_map = {'Onboarding': 'Onboarding', 'Adoção': 'Adoção', 'Retenção': 'Retenção'}
             modelo = CustomerHealthModel()
@@ -418,26 +416,23 @@ if st.button("PROCESSAR RECLASSIFICAÇÃO MSP", type="primary"):
         
         st.markdown("---")
         
-        # Resultados e Gráficos
         c_res1, c_res2 = st.columns(2)
         with c_res1:
             with st.container(border=True):
                 st.markdown(f"<h3 style='text-align:center'>Risco Calculado</h3>", unsafe_allow_html=True)
                 fig_risco = create_gauge_chart(res['Risco'])
                 st.plotly_chart(fig_risco, use_container_width=True)
-                st.markdown("<p style='text-align:center; color:#A6A6A6'>*Quanto maior, mais propensão a Churn</p>", unsafe_allow_html=True)
+                st.markdown("<p style='text-align:center; color:#A6A6A6'>*Quanto maior, maior a propensão a Churn</p>", unsafe_allow_html=True)
         with c_res2:
             with st.container(border=True):
                 st.markdown(f"<h3 style='text-align:center'>Potencial Calculado</h3>", unsafe_allow_html=True)
-                # O gráfico de potencial também usa as cores saudáveis corporativas
                 fig_potencial = create_gauge_chart(res['Potencial'])
                 st.plotly_chart(fig_potencial, use_container_width=True)
-                st.markdown("<p style='text-align:center; color:#A6A6A6'>*Quanto maior, mais propensão a Expansão</p>", unsafe_allow_html=True)
+                st.markdown("<p style='text-align:center; color:#A6A6A6'>*Quanto maior, maior a propensão a Expansão</p>", unsafe_allow_html=True)
 
         st.write("")
         st.markdown("### 📋 Posicionamento e Plano de Ação Strati") 
         
-        # O container geral já está escuro e moderno
         with st.container(border=True):
             estrat = res.get('Estrategia', 'Erro ao gerar estratégia')
             acoes_list = res.get('Acoes', [])
@@ -449,17 +444,14 @@ if st.button("PROCESSAR RECLASSIFICAÇÃO MSP", type="primary"):
             st.write("")
             st.markdown("**Próximos Passos Táticos:**")
             for acao in acoes_list:
-                # O stAlert agora tem borda Laranja Strati no CSS
                 st.markdown(f"""<div style="background-color:rgba(255,255,255,0.03); padding:10px; border-radius:8px; margin-bottom:5px; border-left: 3px solid #F6A41A;">{acao}</div>""", unsafe_allow_html=True)
 
-        # 5. Salvamento no Banco
-        st.write("💾 Salvando dados na planilha...")
+        st.write("💾 A guardar os dados na folha de cálculo...")
         
         nps_banco = res['NPS'] if res['NPS'] != "N/A" else ""
         str_acoes = "\n".join([f"- {a}" for a in res.get('Acoes', [])])
         playbook_completo = f"{res.get('Estrategia', '')}\n\n[AÇÕES SUGERIDAS]\n{str_acoes}"
         
-        # DadosDB ajustados para colunas limpas
         dados_db = {
             "Data": datetime.now().strftime("%d/%m/%Y %H:%M"), 
             "Cliente": nome, 
@@ -475,6 +467,6 @@ if st.button("PROCESSAR RECLASSIFICAÇÃO MSP", type="primary"):
         }
         
         if salvar_no_banco(dados_db):
-            st.toast("Sucesso! Análise salva na planilha.", icon="✅")
+            st.toast("Sucesso! Análise guardada na folha de cálculo.", icon="✅")
         else:
-            st.error("Erro ao conectar com a planilha. Verifique os Secrets.")
+            st.error("Erro ao ligar à folha de cálculo. Verifica os Secrets.")
