@@ -3,3 +3,4 @@ pandas
 st-gsheets-connection
 pyotp
 plotly
+google-generativeai
