@@ -26,7 +26,7 @@ def load_css():
         <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Montserrat:wght@600;700&display=swap');
 
-        /* FUNDO PRINCIPAL COM IMAGEM STRATI (image_1.png) */
+        /* FUNDO PRINCIPAL COM IMAGEM STRATI */
         .stApp {{
             font-family: 'Inter', sans-serif;
             background-image: linear-gradient(rgba(11, 13, 25, 0.85), rgba(11, 13, 25, 0.85)), url("https://raw.githubusercontent.com/sua_conta/seu_repo/main/background_strati.png");
@@ -36,16 +36,15 @@ def load_css():
             color: #f8fafc;
         }}
 
-        /* SIDEBAR (FUNDO AZUL PROFUNDO) */
+        /* SIDEBAR */
         [data-testid="stSidebar"] {{
             background-color: rgba(11, 17, 32, 0.98);
             border-right: 1px solid rgba(255, 255, 255, 0.1);
         }}
 
-        /* TÍTULOS E TEXTOS */
         h1, h2, h3 {{ font-family: 'Montserrat', sans-serif !important; font-weight: 700; color: #ffffff !important; }}
         
-        /* BOTÃO LARANJA STRATI (F6A41A -> ED701B) */
+        /* BOTÃO LARANJA STRATI */
         div.stButton > button:first-child {{
             background: linear-gradient(90deg, #F6A41A 0%, #ED701B 100%);
             color: white; border: none; padding: 18px; border-radius: 12px;
@@ -56,7 +55,7 @@ def load_css():
             transform: translateY(-2px); box-shadow: 0 8px 25px rgba(246, 164, 26, 0.5);
         }}
 
-        /* SLIDERS AZUL GUARDIAN (189CD8) */
+        /* SLIDERS AZUL GUARDIAN */
         div[data-baseweb="slider"] div[role="slider"] {{ background-color: #189CD8 !important; border: 2px solid white !important; }}
         div[data-baseweb="slider"] > div > div > div:first-child {{ background-color: #189CD8 !important; }}
 
@@ -69,7 +68,6 @@ def load_css():
             padding: 20px;
         }}
 
-        /* LEGENDAS (CAPTIONS) */
         .stCaption {{ color: #cbd5e1 !important; font-size: 13px !important; line-height: 1.4 !important; }}
         </style>
     """, unsafe_allow_html=True)
@@ -118,26 +116,27 @@ if not check_authentication(): st.stop()
 def gerar_playbook_ia(d):
     prompt = f"""
     Aja como um Diretor de Customer Success para MSPs. Analise este cenário e gere um playbook tático:
-    - Cliente em fase de {d['fase']}.
+    - Tier/Cohort: {d['cohort']}
+    - Fase da Jornada: {d['fase']}
     - Risco Atual: {d['Risco']}% | Potencial de Expansão: {d['Potencial']}%
     - Saúde Técnica (SLA/Chamados): {d['Servico']}/100
-    - Engajamento (QBR/Reuniões): {d['Engajamento']}/100
+    - Engajamento: {d['Engajamento']}/100
     - Satisfação (NPS): {d['NPS']}
     
     Contexto Crítico: {d['gatilhos']}
     
-    Formate sua resposta com:
-    1. 🎯 ESTRATÉGIA MACRO (Uma frase forte)
-    2. 🛠️ AÇÕES IMEDIATAS (3 tópicos acionáveis)
-    3. 💡 INSIGHT DE EXPANSÃO (Onde está o dinheiro?)
+    Formate sua resposta rigorosamente em 3 seções:
+    1. 🎯 ESTRATÉGIA MACRO (Uma frase forte sobre o direcional da conta)
+    2. 🛠️ AÇÕES IMEDIATAS (3 tópicos curtos e acionáveis)
+    3. 💡 INSIGHT DE EXPANSÃO (Onde está o dinheiro/White Space baseando-se no tier do cliente)
     
-    Use tom executivo, sem enrolação. Não cite nomes.
+    Use tom executivo e não cite nomes fictícios de clientes.
     """
     try:
         response = model.generate_content(prompt)
         return response.text
     except:
-        return "IA temporariamente indisponível. Siga o playbook padrão de retenção."
+        return "IA indisponível. Focar na estabilização de SLA e manutenção de relacionamento regular."
 
 # ==================================================
 # 📊 GRÁFICOS (GAUGE CUSTOM)
@@ -164,21 +163,70 @@ with st.sidebar:
     st.markdown("<h2 style='text-align: center;'>STRATI CONTROL</h2>", unsafe_allow_html=True)
     st.write("---")
     nome_cliente = st.text_input("Nome da Conta", placeholder="Ex: Cliente Alpha")
+    
+    # NOVO: SELEÇÃO DE COHORT
+    cohort = st.selectbox("Tier / Cohort", ["Diamante", "Ouro", "Prata", "Bronze"])
+    local = st.radio("Localização", ["SP (Local)", "Fora de SP (Remoto)"], horizontal=True)
+    
+    # FASE DA JORNADA COM LEGENDAS RESTAURADAS
     fase_jornada = st.selectbox("Fase Atual", ['Onboarding', 'Adoção', 'Retenção'])
+    if fase_jornada == 'Onboarding':
+        st.info("🎯 **0-6 meses:** Foco em implementação, formação e entrega do primeiro valor técnico.")
+    elif fase_jornada == 'Adoção':
+        st.info("⚙️ **6-24 meses:** Foco em uso recorrente, estabilidade técnica e maturidade operacional.")
+    else:
+        st.info("🤝 **+24 meses:** Parceria estratégica a longo prazo, foco em renovação e novos negócios.")
+        
     st.write("---")
-    st.markdown("### 📈 Operação & Saúde")
-    vol_chamados = st.selectbox("Volume de Chamados", ["Adequado / Estável", "Muito Baixo (Silêncio)", "Alto (Instabilidade)", "Crítico (Incidentes Graves)"])
-    sla_mes = st.slider("SLA Atingido (%)", 50, 100, 98)
-    nps_nota = st.slider("Último NPS (0-10)", 0, 10, 8)
-    st.write("---")
-    qbr_st = st.radio("QBR no Prazo?", ["Sim", "Não"], horizontal=True)
-    book_st = st.radio("Book de Serviços?", ["Apresentado", "Não realizado"], horizontal=True)
+    if st.button("🚪 Sair"): st.session_state.clear(); st.rerun()
 
 # CABEÇALHO
 st.markdown(f"<h1>🛡️ CS Intelligence <span style='color:#F6A41A'>AI Edition</span></h1>", unsafe_allow_html=True)
 st.markdown(f"Análise Estratégica para: **{nome_cliente if nome_cliente else 'Nova Consulta'}**")
 
-# COLUNAS DE POTENCIAL (RESTAURANDO LEGENDAS ABC)
+# LINHA 1: RISCO (RESTAUROU VISITAS, CALLS E QBR POR COHORT)
+st.markdown("### 📉 Avaliação de Risco (Operacional & Relacionamento)")
+r1, r2, r3 = st.columns(3)
+with r1:
+    with st.container(border=True):
+        st.markdown("**Saúde do Serviço (SLA)**")
+        vol_chamados = st.selectbox("Volume de Chamados", ["Adequado / Estável", "Muito Baixo (Silêncio)", "Alto (Instabilidade)", "Crítico (Incidentes Graves)"])
+        sla_mes = st.slider("SLA Atingido (%)", 50, 100, 98)
+with r2:
+    with st.container(border=True):
+        st.markdown("**Engajamento Contínuo**")
+        # Restauro das visitas e online
+        if local == "SP (Local)":
+            visitas = st.slider("Visitas Presenciais", 0, 5, 1)
+            online = st.slider("Calls Online", 0, 10, 2)
+        else:
+            online = st.slider("Calls Online (Meta: 2)", 0, 10, 2)
+            visitas = 0
+            
+        # Restauro das 3 opções do Book
+        book_st = st.selectbox("Book de Serviços", ["Apresentado", "Enviado", "Não realizado"])
+        
+        # Inteligência da QBR baseada no Tier
+        if cohort in ["Diamante", "Ouro", "Prata"]:
+            qbr_st = st.radio("QBR no Prazo?", ["Sim", "Não"], horizontal=True)
+        else:
+            qbr_st = "N/A"
+            st.caption("ℹ️ *QBR não aplicável para tier Bronze.*")
+            
+with r3:
+    with st.container(border=True):
+        st.markdown("**Satisfação Percebida**")
+        # Restauro do Toggle de NPS
+        tem_nps = st.toggle("Cliente respondeu NPS recente?", value=True)
+        if tem_nps: 
+            nps_nota = st.slider("Nota NPS (0-10)", 0, 10, 8)
+        else: 
+            nps_nota = None
+            st.warning("⚖️ Peso do NPS redistribuído nas outras métricas.")
+
+st.write("---")
+
+# LINHA 2: POTENCIAL (LEGENDAS ABC RESTAURADAS)
 st.markdown("### 🚀 Avaliação de Potencial & Fit")
 p1, p2, p3 = st.columns(3)
 
@@ -205,19 +253,40 @@ st.write("")
 if st.button("PROCESSAR RECLASSIFICAÇÃO COM IA"):
     if not nome_cliente: st.error("⚠️ Por favor, insira o nome do cliente.")
     else:
-        # Lógica de Cálculo
+        # LÓGICA DE CÁLCULO ATUALIZADA
         score_vol = {"Adequado / Estável": 100, "Muito Baixo (Silêncio)": 30, "Alto (Instabilidade)": 50, "Crítico (Incidentes Graves)": 10}[vol_chamados]
         saude_servico = (score_vol * 0.6) + (sla_mes * 0.4)
-        engajamento = ((100 if qbr_st == 'Sim' else 0) * 0.5) + ((100 if book_st == 'Apresentado' else 0) * 0.5)
         
-        risco_f = ((100 - saude_servico) * 0.4) + ((100 - engajamento) * 0.3) + ((100 - (nps_nota*10)) * 0.3)
+        # Presença
+        if local == "SP (Local)":
+            meta_v = 2 if fase_jornada == 'Onboarding' else (1 if fase_jornada == 'Adoção' else 0.5)
+            score_presenca = 100 if meta_v == 0 else min((visitas/meta_v)*100, 100.0)
+            bonus_online = min(online*2, 10)
+        else:
+            score_presenca = min((online/2)*100, 100.0)
+            bonus_online = 0 if visitas == 0 else 10 
+            
+        # Book de Serviços
+        book_pts = 100 if book_st == 'Apresentado' else (50 if book_st == 'Enviado' else 0)
+        
+        # Engajamento com regra de Cohort (Bronze não dilui nota com QBR)
+        if cohort in ["Diamante", "Ouro", "Prata"]:
+            qbr_pts = 100 if qbr_st == 'Sim' else 0
+            engajamento = min((score_presenca*0.5) + ((qbr_pts + book_pts)/2*0.5) + bonus_online, 100.0)
+        else:
+            engajamento = min((score_presenca*0.5) + (book_pts * 0.5) + bonus_online, 100.0)
+            
+        # Risco e Potencial Final
+        nps_score = nps_nota * 10 if tem_nps else 50
+        risco_f = ((100 - saude_servico) * 0.4) + ((100 - engajamento) * 0.3) + ((100 - nps_score) * 0.3)
         potencial_f = (receita_abc * 0.4) + (fit_tecnico * 0.3) + (exp_ws * 0.3)
         
-        # Gatilhos
+        # Geração de Gatilhos para IA
         gats = []
         if sla_mes < 90: gats.append("SLA Crítico")
-        if nps_nota <= 6: gats.append("Cliente Detrator")
-        if qbr_st == 'Não': gats.append("Falta de Cadência")
+        if tem_nps and nps_nota <= 6: gats.append("Cliente Detrator")
+        if cohort in ["Diamante", "Ouro", "Prata"] and qbr_st == 'Não': gats.append(f"QBR Atrasada para Conta {cohort}")
+        if not gats: gats.append("Operação técnica controlada, sem red flags.")
         
         # Dashboard de Gráficos
         res1, res2 = st.columns(2)
@@ -236,9 +305,9 @@ if st.button("PROCESSAR RECLASSIFICAÇÃO COM IA"):
         st.write("---")
         with st.spinner("🤖 Gemini AI gerando estratégia personalizada..."):
             analise_ia = gerar_playbook_ia({
-                'fase': fase_jornada, 'Risco': int(risco_f), 'Potencial': int(potencial_f),
+                'cohort': cohort, 'fase': fase_jornada, 'Risco': int(risco_f), 'Potencial': int(potencial_f),
                 'Servico': int(saude_servico), 'Engajamento': int(engajamento), 
-                'NPS': nps_nota, 'gatilhos': " | ".join(gats)
+                'NPS': nps_nota if tem_nps else "Não respondeu", 'gatilhos': " | ".join(gats)
             })
             
             st.markdown("### 📋 Diagnóstico de Inteligência")
@@ -254,7 +323,7 @@ if st.button("PROCESSAR RECLASSIFICAÇÃO COM IA"):
                 df = conn.read(worksheet="Página1", ttl=0)
                 nova_linha = pd.DataFrame([{
                     "Data": datetime.now().strftime("%d/%m/%Y"),
-                    "Cliente": nome_cliente, "Risco": f"{risco_f:.1f}%",
+                    "Cliente": nome_cliente, "Tier": cohort, "Risco": f"{risco_f:.1f}%",
                     "Potencial": f"{potencial_f:.1f}%", "Playbook IA": analise_ia
                 }])
                 conn.update(worksheet="Página1", data=pd.concat([df, nova_linha], ignore_index=True))
