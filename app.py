@@ -135,9 +135,8 @@ def gerar_playbook_ia(d):
     try:
         response = model.generate_content(prompt)
         return response.text
-    except:
-        return "IA indisponível. Focar na estabilização de SLA e manutenção de relacionamento regular."
-
+    except Exception as e:
+        return f"⚠️ Erro detalhado da IA: {str(e)}"
 # ==================================================
 # 📊 GRÁFICOS (GAUGE CUSTOM)
 # ==================================================
