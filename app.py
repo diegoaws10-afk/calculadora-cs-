@@ -14,7 +14,7 @@ st.set_page_config(page_title="Strati | CS Intelligence AI", layout="wide", page
 # --- CONFIGURAÇÃO GEMINI AI ---
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    model = genai.GenerativeModel('gemini-pro')
 except:
     st.error("⚠️ Erro de Conexão IA: Verifique a GEMINI_API_KEY nos Secrets.")
 
