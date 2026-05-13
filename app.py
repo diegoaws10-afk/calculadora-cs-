@@ -133,7 +133,18 @@ def gerar_playbook_ia(d):
     Use tom executivo e não cite nomes fictícios de clientes.
     """
     try:
-        response = model.generate_content(prompt)
+        # AUTODESCOBERTA: O código procura o modelo válido automaticamente
+        modelo_correto = None
+        for m in genai.list_models():
+            if 'generateContent' in m.supported_generation_methods:
+                modelo_correto = m.name
+                break
+                
+        if not modelo_correto:
+            return "⚠️ Erro: A sua chave de API não tem acesso a modelos de texto."
+            
+        model_dinamico = genai.GenerativeModel(modelo_correto)
+        response = model_dinamico.generate_content(prompt)
         return response.text
     except Exception as e:
         return f"⚠️ Erro detalhado da IA: {str(e)}"
