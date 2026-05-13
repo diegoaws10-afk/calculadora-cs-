@@ -231,11 +231,12 @@ def create_gauge(label, value, color_steps):
 # ==================================================
 # 🖥️ INTERFACE PRINCIPAL
 # ==================================================
-with st.sidebar:with st.sidebar:
+with st.sidebar:
     st.markdown("<h2 style='text-align: center; color: #F6A41A !important; font-size: 24px;'>STRATI</h2>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; color: #94a3b8; font-size: 12px; margin-top:-10px;'>CS Intelligence Engine</p>", unsafe_allow_html=True)
     st.write("---")
     nome_cliente = st.text_input("Nome da Conta", placeholder="Ex: Corporação Alpha")
+
     segmento = st.selectbox("Setor de Atuação", ["Tecnologia / SaaS", "Saúde / Clínicas", "Varejo / E-commerce", "Indústria / Manufatura", "Serviços B2B / Consultoria", "Educação", "Financeiro / Contabilidade", "Outro"])
     cohort = st.selectbox("Tier de Serviço", ["Diamante", "Ouro", "Prata", "Bronze"])
     local = st.radio("Localização Física", ["SP (Local)", "Fora de SP (Remoto)"], horizontal=True)
