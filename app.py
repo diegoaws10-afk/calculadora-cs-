@@ -23,10 +23,8 @@ except:
 def load_css():
     st.markdown("""
         <style>
-        /* IMPORTAÇÃO DE FONTES TECNOLÓGICAS E MODERNAS */
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght=300;400;600;800&family=Plus+Jakarta+Sans:wght=400;500;600;700&display=swap');
 
-        /* FUNDO GLOBAL: DARK MODE PROFUNDO + IMAGEM COM OVERLAY GRADIENTE */
         .stApp {
             font-family: 'Plus Jakarta Sans', sans-serif;
             background: linear-gradient(135deg, rgba(8, 10, 16, 0.95) 0%, rgba(15, 23, 42, 0.85) 100%), url("https://raw.githubusercontent.com/sua_conta/seu_repo/main/background_strati.png");
@@ -36,7 +34,6 @@ def load_css():
             color: #e2e8f0;
         }
 
-        /* SIDEBAR ESTILO FROSTED GLASS (VIDRO FOSCO) */
         [data-testid="stSidebar"] {
             background-color: rgba(10, 15, 28, 0.65) !important;
             backdrop-filter: blur(16px);
@@ -44,7 +41,6 @@ def load_css():
             border-right: 1px solid rgba(255, 255, 255, 0.05);
         }
 
-        /* TIPOGRAFIA DE TÍTULOS (OUTFIT) */
         h1, h2, h3, h4, h5 { 
             font-family: 'Outfit', sans-serif !important; 
             font-weight: 800; 
@@ -52,7 +48,6 @@ def load_css():
             color: #ffffff !important; 
         }
         
-        /* BOTÃO PRINCIPAL (NEON GLOW + PULSO) */
         div.stButton > button:first-child {
             background: linear-gradient(135deg, #F6A41A 0%, #E05C00 100%);
             color: white; 
@@ -74,7 +69,6 @@ def load_css():
             border: 1px solid rgba(255, 255, 255, 0.4);
         }
 
-        /* SLIDERS MODERNIZADOS (AZUL STRATI GUARDIAN) */
         div[data-baseweb="slider"] div[role="slider"] { 
             background-color: #189CD8 !important; 
             border: 3px solid #0f172a !important; 
@@ -84,7 +78,6 @@ def load_css():
             background-color: #189CD8 !important; 
         }
 
-        /* CARDS & CONTAINERS (GLASSMORPHISM) */
         [data-testid="stVerticalBlockBorderWrapper"] {
             border-radius: 20px;
             background: rgba(30, 41, 59, 0.25) !important;
@@ -100,10 +93,8 @@ def load_css():
             transform: translateY(-2px);
         }
 
-        /* TOGGLES E RADIOS */
         .st-bb { background-color: transparent; }
         
-        /* CAIXA DE RESULTADO DA IA (CYBERBOX) */
         .ai-playbook-box {
             background: linear-gradient(145deg, rgba(20, 24, 39, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%);
             border: 1px solid rgba(246, 164, 26, 0.3);
@@ -122,10 +113,8 @@ def load_css():
             margin-bottom: 10px;
         }
 
-        /* LEGENDAS MAIS SUTIS */
-        .stCaption { color: #94a3b8 !important; font-size: 13px !important; font-weight: 500; }
+        .stCaption { color: #cbd5e1 !important; font-size: 13px !important; font-weight: 500; }
         
-        /* SCROLLBAR CUSTOMIZADA */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.5); }
         ::-webkit-scrollbar-thumb { background: rgba(246, 164, 26, 0.5); border-radius: 10px; }
@@ -236,7 +225,6 @@ with st.sidebar:
     st.markdown("<p style='text-align: center; color: #94a3b8; font-size: 12px; margin-top:-10px;'>CS Intelligence Engine</p>", unsafe_allow_html=True)
     st.write("---")
     nome_cliente = st.text_input("Nome da Conta", placeholder="Ex: Corporação Alpha")
-
     segmento = st.selectbox("Setor de Atuação", ["Tecnologia / SaaS", "Saúde / Clínicas", "Varejo / E-commerce", "Indústria / Manufatura", "Serviços B2B / Consultoria", "Educação", "Financeiro / Contabilidade", "Outro"])
     cohort = st.selectbox("Tier de Serviço", ["Diamante", "Ouro", "Prata", "Bronze"])
     local = st.radio("Localização Física", ["SP (Local)", "Fora de SP (Remoto)"], horizontal=True)
@@ -244,11 +232,11 @@ with st.sidebar:
     st.write("---")
     fase_jornada = st.selectbox("Fase do Ciclo de Vida", ['Onboarding', 'Adoção', 'Retenção'])
     if fase_jornada == 'Onboarding': st.caption("🎯 **0-6 meses:** Foco em implementação.")
-    elif fase_jornada == 'Adoção': st.caption("⚙️ **6-24 meses:** Foco em estabilidade.")
-    else: st.caption("🤝 **+24 meses:** Expansão e parceria estratégica.")
+    elif fase_jornada == 'Adoção': st.caption("⚙️ **6-24 meses:** Foco em uso recorrente.")
+    else: st.caption("🤝 **+24 meses:** Expansão e renovação.")
         
     st.write("---")
-    st.markdown("### ⚡ Telemetria Base")
+    st.markdown("### 📈 Parâmetros Operacionais")
     vol_chamados = st.selectbox("Volume de Chamados", ["Adequado / Estável", "Muito Baixo (Silêncio)", "Alto (Instabilidade)", "Crítico (Incidentes Graves)"])
     sla_mes = st.slider("SLA Atingido (%)", 50, 100, 98)
     
@@ -289,21 +277,44 @@ with r3:
 
 st.write("---")
 
-# LINHA 2: POTENCIAL
+# LINHA 2: POTENCIAL (VETORES DE EXPANSÃO & FIT COM MELHORIAS)
 st.markdown("### 🚀 Vetores de Expansão & Fit")
 p1, p2, p3 = st.columns(3)
+
 with p1:
     with st.container(border=True):
-        st.markdown("<p style='font-weight: 600;'>Representatividade MRR</p>", unsafe_allow_html=True)
-        receita_abc = st.slider("Impacto Financeiro", 0, 100, 50, key="abc")
+        st.markdown("**Representatividade MRR**")
+        st.markdown("<p style='font-size: 14px; margin-bottom:5px; font-weight:600; color:#cbd5e1;'>Impacto Financeiro</p>", unsafe_allow_html=True)
+        
+        # Inputs para eliminar o "chutômetro"
+        mrr_total = st.number_input("MRR Total Strati (R$)", value=1000000, step=50000, key="mrr_tot")
+        mrr_cliente = st.number_input("MRR deste Cliente (R$)", value=50000, step=5000, key="mrr_cli")
+        
+        # Cálculo matemático real de representatividade
+        participacao = (mrr_cliente / mrr_total) * 100 if mrr_total > 0 else 0
+        
+        # Mapeamento da porcentagem para o score de 0 a 100 da fórmula interna
+        if participacao < 1:
+            receita_abc = participacao * 40
+        elif participacao < 5:
+            receita_abc = 40 + ((participacao - 1) / 4) * 40
+        else:
+            receita_abc = min(80 + ((participacao - 5) / 5) * 20, 100.0)
+            
+        st.markdown(f"<p style='font-size: 13px; color: #F6A41A; font-weight:bold; margin-top:8px; margin-bottom:8px;'>Impacto de perda em Churn: {participacao:.2f}% do faturamento geral<br>Score de Impacto: {receita_abc:.1f}/100</p>", unsafe_allow_html=True)
+        st.caption("**Legenda - Impacto Financeiro:**<br>• **80-100 (Crítico - Curva A):** A conta representa 5% ou mais do faturamento recorrente total.<br>• **40-79 (Médio - Curva B):** A conta representa entre 1% e 4.9% do faturamento recorrente total.<br>• **0-39 (Baixo - Curva C):** A conta representa menos de 1% do faturamento recorrente total.", unsafe_allow_html=True)
+
 with p2:
     with st.container(border=True):
-        st.markdown("<p style='font-weight: 600;'>Alinhamento de Stack</p>", unsafe_allow_html=True)
+        st.markdown("**Alinhamento de Stack**")
         fit_tecnico = st.slider("Score de Fit Técnico", 0, 100, 70, key="fit")
+        st.caption("<br>**Legenda - Score de Fit Técnico:**<br>• **80-100 (Alto):** Totalmente aderente, utiliza as ferramentas homologadas e segue rigidamente os padrões da Strati.<br>• **40-79 (Médio):** Aderência parcial; possui sistemas legados ou ferramentas paralelas fora do padrão recomendado.<br>• **0-39 (Baixo):** Resistência técnica elevada ou uso massivo de soluções desalinhadas com a nossa stack oficial.", unsafe_allow_html=True)
+
 with p3:
     with st.container(border=True):
-        st.markdown("<p style='font-weight: 600;'>White Space Analysis</p>", unsafe_allow_html=True)
+        st.markdown("**White Space Analysis**")
         exp_ws = st.slider("Oportunidade Cross-sell", 0, 100, 30, key="exp")
+        st.caption("<br>**Legenda - Oportunidade Cross-sell:**<br>• **80-100 (Alta):** Grande espaço para expansão; o cliente não possui a maioria das nossas torres cruciais (Segurança, Cloud ou Guardian).<br>• **40-79 (Média):** Já consome algumas soluções, mas há espaço claro para venda de novas torres organizacionais.<br>• **0-39 (Baixa):** Conta altamente saturada; o cliente já contratou quase a totalidade do nosso portfólio disponível.", unsafe_allow_html=True)
 
 st.write("")
 st.write("")
