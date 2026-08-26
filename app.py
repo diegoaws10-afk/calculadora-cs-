@@ -7,6 +7,7 @@ import time
 import os
 import plotly.graph_objects as go
 import google.generativeai as genai
+from fpdf import FPDF  # Biblioteca para geração do PDF
 
 # ==================================================
 # ⚙️ CONFIGURAÇÕES INICIAIS DA SUA NOVA EMPRESA
@@ -30,8 +31,6 @@ def load_css():
         <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Space+Grotesk:wght@500;700&display=swap');
 
-        /* Paleta: Fundo Escuro, Botões Indigo (#6366f1), Detalhes Ciano (#06b6d4) */
-        
         .stApp {
             font-family: 'Inter', sans-serif;
             background: radial-gradient(circle at top left, #1e1b4b, #0f172a 40%, #020617 100%);
@@ -52,7 +51,6 @@ def load_css():
             color: #ffffff !important; 
         }
         
-        /* NOVO BOTÃO PRINCIPAL */
         div.stButton > button:first-child {
             background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
             color: white; 
@@ -74,7 +72,6 @@ def load_css():
             border: 1px solid rgba(255, 255, 255, 0.5);
         }
 
-        /* SLIDERS */
         div[data-baseweb="slider"] div[role="slider"] { 
             background-color: #06b6d4 !important; 
             border: 3px solid #0f172a !important; 
@@ -84,7 +81,6 @@ def load_css():
             background-color: #06b6d4 !important; 
         }
 
-        /* CARDS / CONTAINERS */
         [data-testid="stVerticalBlockBorderWrapper"] {
             border-radius: 16px;
             background: rgba(30, 41, 59, 0.4) !important;
@@ -101,7 +97,6 @@ def load_css():
         
         .st-bb { background-color: transparent; }
         
-        /* BOX DO PLAYBOOK DA IA */
         .ai-playbook-box {
             background: linear-gradient(145deg, rgba(15, 23, 42, 0.9) 0%, rgba(2, 6, 23, 0.95) 100%);
             border: 1px solid rgba(99, 102, 241, 0.3);
@@ -132,7 +127,7 @@ def load_css():
 load_css()
 
 # ==================================================
-# 🔐 SEGURANÇA (AUTENTICAÇÃO)
+# 🔐 SEGURANÇA (AUTENTICAÇÃO & LOGO VETORIZADO)
 # ==================================================
 def check_authentication():
     if st.session_state.get("authenticated", False): return True
@@ -140,8 +135,7 @@ def check_authentication():
     c_esq, c_centro, c_dir = st.columns([1, 1.2, 1])
     with c_centro:
         with st.container(border=True):
-            
-            # NOVO LOGO EM SVG (VETOR 100% NO CÓDIGO) E TIPOGRAFIA
+            # NOVO LOGO EM SVG
             st.markdown("""
             <div style="display: flex; justify-content: center; align-items: center; flex-direction: column; margin-bottom: 20px;">
                 <svg width="70" height="70" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
@@ -151,11 +145,8 @@ def check_authentication():
                             <stop offset="100%" style="stop-color:#06b6d4;stop-opacity:1" />
                         </linearGradient>
                     </defs>
-                    <!-- Hexágono Base (Escudo de Retenção) -->
                     <path d="M50 5 L90 25 L90 75 L50 95 L10 75 L10 25 Z" fill="rgba(99, 102, 241, 0.05)" stroke="url(#gradLogo)" stroke-width="4" stroke-linejoin="round"/>
-                    <!-- Letra R Abstrata e IA Nodes -->
                     <path d="M35 35 L35 70 M35 35 C 55 25, 65 40, 50 55 L35 55 M50 55 L65 75" fill="none" stroke="url(#gradLogo)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
-                    <!-- Pontos Neurais (IA) -->
                     <circle cx="35" cy="35" r="5" fill="#06b6d4" />
                     <circle cx="65" cy="75" r="5" fill="#6366f1" />
                 </svg>
@@ -167,7 +158,7 @@ def check_authentication():
             with st.form("login_form"):
                 u = st.text_input("Credencial de Acesso")
                 p = st.text_input("Código de Segurança", type="password")
-                t = st.text_input("Token MFA (Opcional)", help="Apenas para administradores do sistema")
+                t = st.text_input("Token MFA (Opcional)")
                 st.write("")
                 if st.form_submit_button("INICIAR SESSÃO"):
                     if u in st.secrets["passwords"] and p == st.secrets["passwords"][u]:
@@ -180,6 +171,9 @@ def check_authentication():
                             st.session_state["authenticated"] = True; st.session_state["user_logado"] = u; st.rerun()
                     else: st.error("Acesso Negado.")
     return False
+
+if not check_authentication(): st.stop()
+
 # ==================================================
 # 🧠 CÉREBRO RETEN.AI (PROMPT ENGENHARIA AVANÇADA)
 # ==================================================
@@ -203,22 +197,22 @@ def gerar_playbook_ia(d):
     
     DIRETRIZES DE SAÍDA (Formate rigorosamente em Markdown com os seguintes cabeçalhos):
     
-    ### 📊 1. DIAGNÓSTICO EXECUTIVO
+    ### 1. DIAGNOSTICO EXECUTIVO
     (Escreva 1 parágrafo letal e direto ao ponto resumindo o cenário atual da conta. Foque no risco financeiro e no impacto dos gatilhos identificados. Use um tom consultivo e de urgência se o risco for alto.)
     
-    ### 🗺️ 2. PLANO DE AÇÃO TÁTICO (30-60-90 Dias)
-    (Crie um roadmap em bullet points com ações práticas para a equipe de CS e Operações. Sem jargões vazios, diga O QUE fazer e COMO fazer baseado no setor de {d['segmento']})
-    * **Dia 1 ao 30 (Estancar Sangramento / Quick Wins):** (Liste 2 ações críticas)
-    * **Dia 31 ao 60 (Estabilização e Valor):** (Liste 2 ações focadas em adoção/engajamento)
-    * **Dia 61 ao 90 (Prevenção e QBR):** (Liste 1 ação para garantir retenção de longo prazo)
+    ### 2. PLANO DE ACAO TATICO (30-60-90 Dias)
+    (Crie um roadmap em bullet points com ações práticas para a equipe de CS e Operações. Diga O QUE fazer e COMO fazer baseado no setor de {d['segmento']})
+    * Dia 1 ao 30 (Estancar Sangramento / Quick Wins): (Liste 2 ações críticas)
+    * Dia 31 ao 60 (Estabilização e Valor): (Liste 2 ações focadas em adoção/engajamento)
+    * Dia 61 ao 90 (Prevenção e QBR): (Liste 1 ação para garantir retenção de longo prazo)
     
-    ### 💰 3. ESTRATÉGIA DE EXPANSÃO (CROSS-SELL/UPSELL)
-    (Considerando que o potencial de expansão é de {d['Potencial']}%, sugira 1 abordagem prática de como o CS pode plantar uma semente de venda de novos serviços. Justifique essa sugestão com as dores típicas de empresas do setor de {d['segmento']})
+    ### 3. ESTRATEGIA DE EXPANSAO (CROSS-SELL)
+    (Considerando que o potencial de expansão é de {d['Potencial']}%, sugira 1 abordagem prática de como o CS pode plantar uma semente de venda de novos serviços justificada pelas dores do setor de {d['segmento']})
     
     Regras estritas: 
-    - Não use introduções cordiais ("Olá", "Claro, aqui está"). 
-    - Vá direto ao conteúdo.
-    - O tom deve ser de um especialista cobrando caro pela consultoria: assertivo, analítico e pragmático.
+    - Não use introduções cordiais. Vá direto ao conteúdo.
+    - O tom deve ser de um especialista: assertivo e pragmático.
+    - Evite o uso de emojis no texto gerado para garantir compatibilidade com a geração do PDF.
     """
     try:
         modelo_correto = None
@@ -228,7 +222,6 @@ def gerar_playbook_ia(d):
                 break
         if not modelo_correto: return "⚠️ Erro: API Key sem permissão de texto."
         
-        # Temperatura baixa para output executivo
         model_dinamico = genai.GenerativeModel(
             model_name=modelo_correto,
             generation_config={"temperature": 0.3} 
@@ -336,25 +329,29 @@ with p1:
         else: receita_abc = min(80 + ((participacao - 5) / 5) * 20, 100.0)
             
         st.markdown(f"<p style='font-size: 13px; color: #6366f1; font-weight:bold; margin-top:8px; margin-bottom:8px;'>Impacto de perda em Churn: {participacao:.2f}% do faturamento geral<br>Score de Impacto: {receita_abc:.1f}/100</p>", unsafe_allow_html=True)
-        st.caption("**Legenda - Impacto Financeiro:**<br>• **80-100 (Crítico - Curva A):** A conta representa 5% ou mais do faturamento total.<br>• **40-79 (Médio - Curva B):** Entre 1% e 4.9% do faturamento.<br>• **0-39 (Baixo - Curva C):** Menos de 1% do faturamento.", unsafe_allow_html=True)
+        st.caption("**Legenda:**<br>• **80-100 (Curva A):** A conta representa 5% ou mais do faturamento.<br>• **40-79 (Curva B):** Entre 1% e 4.9% do faturamento.<br>• **0-39 (Curva C):** Menos de 1% do faturamento.", unsafe_allow_html=True)
 
 with p2:
     with st.container(border=True):
         st.markdown("**Alinhamento de Stack**")
         fit_tecnico = st.slider("Score de Fit Técnico", 0, 100, 70, key="fit")
-        st.caption("<br>**Legenda - Score de Fit Técnico:**<br>• **80-100 (Alto):** Utiliza as ferramentas homologadas e segue as boas práticas.<br>• **40-79 (Médio):** Aderência parcial; possui sistemas paralelos.<br>• **0-39 (Baixo):** Uso massivo de soluções desalinhadas com a stack oficial.", unsafe_allow_html=True)
+        st.caption("<br>**Legenda:**<br>• **80-100 (Alto):** Segue as boas práticas.<br>• **40-79 (Médio):** Aderência parcial.<br>• **0-39 (Baixo):** Uso massivo de soluções desalinhadas.", unsafe_allow_html=True)
 
 with p3:
     with st.container(border=True):
         st.markdown("**White Space Analysis**")
         exp_ws = st.slider("Oportunidade Cross-sell", 0, 100, 30, key="exp")
-        st.caption("<br>**Legenda - Oportunidade Cross-sell:**<br>• **80-100 (Alta):** Cliente não possui a maioria dos serviços cruciais do portfólio.<br>• **40-79 (Média):** Há espaço claro para venda de novos serviços.<br>• **0-39 (Baixa):** Cliente já contratou quase a totalidade do portfólio.", unsafe_allow_html=True)
+        st.caption("<br>**Legenda:**<br>• **80-100 (Alta):** Não possui a maioria dos serviços cruciais.<br>• **40-79 (Média):** Espaço claro para novos serviços.<br>• **0-39 (Baixa):** Cliente saturado de portfólio.", unsafe_allow_html=True)
 
 st.write("")
 st.write("")
 
+# ==================================================
+# 🚀 PROCESSAMENTO PRINCIPAL E GERAÇÃO DO PDF
+# ==================================================
 if st.button(f"GERAR DIAGNÓSTICO {NOME_PLATAFORMA.upper()}"):
-    if not nome_cliente: st.error("⚠️ Identificação da conta é obrigatória para processamento.")
+    if not nome_cliente: 
+        st.error("⚠️ Identificação da conta é obrigatória para processamento.")
     else:
         score_vol = {"Adequado / Estável": 100, "Muito Baixo (Silêncio)": 30, "Alto (Instabilidade)": 50, "Crítico (Incidentes Graves)": 10}[vol_chamados]
         saude_servico = (score_vol * 0.6) + (sla_mes * 0.4)
@@ -389,7 +386,6 @@ if st.button(f"GERAR DIAGNÓSTICO {NOME_PLATAFORMA.upper()}"):
         st.markdown("### 📊 Dashboards de Compilação")
         res1, res2 = st.columns(2)
         
-        # Cores ajustadas para combinar com a nova UI
         with res1:
             st.plotly_chart(create_gauge("Índice de Risco", risco_f, [{'range': [0, 40], 'color': "rgba(16, 185, 129, 0.6)"}, {'range': [40, 65], 'color': "rgba(245, 158, 11, 0.6)"}, {'range': [65, 100], 'color': "rgba(239, 68, 68, 0.6)"}]), use_container_width=True)
         with res2:
@@ -411,6 +407,71 @@ if st.button(f"GERAR DIAGNÓSTICO {NOME_PLATAFORMA.upper()}"):
             </div>
             """, unsafe_allow_html=True)
             
+            # --- CONSTRUÇÃO DO PDF ---
+            class PDF(FPDF):
+                def header(self):
+                    self.set_font("helvetica", "B", 24)
+                    self.set_text_color(99, 102, 241) 
+                    self.cell(0, 15, "Reten.AI", border=0, align="C", new_x="LMARGIN", new_y="NEXT")
+                    self.set_font("helvetica", "", 12)
+                    self.set_text_color(100, 116, 139)
+                    self.cell(0, 10, "Relatorio Executivo de Saude do Cliente", border=0, align="C", new_x="LMARGIN", new_y="NEXT")
+                    self.ln(10)
+
+                def footer(self):
+                    self.set_y(-15)
+                    self.set_font("helvetica", "I", 8)
+                    self.set_text_color(148, 163, 184)
+                    self.cell(0, 10, f"Pagina {self.page_no()}", align="C")
+
+            pdf = PDF()
+            pdf.add_page()
+            
+            # Dados do Cliente
+            pdf.set_font("helvetica", "B", 14)
+            pdf.set_text_color(30, 41, 59)
+            # Removemos acentos para evitar bugs na fonte padrão WinAnsi do fpdf2
+            pdf.cell(0, 10, f"Cliente: {nome_cliente}", new_x="LMARGIN", new_y="NEXT")
+            pdf.set_font("helvetica", "", 11)
+            pdf.cell(0, 8, f"Setor: {segmento} | Tier: {cohort}", new_x="LMARGIN", new_y="NEXT")
+            pdf.cell(0, 8, f"Data da Analise: {datetime.now().strftime('%d/%m/%Y')}", new_x="LMARGIN", new_y="NEXT")
+            pdf.ln(5)
+
+            # Telemetria
+            pdf.set_font("helvetica", "B", 14)
+            pdf.set_fill_color(241, 245, 249)
+            pdf.cell(0, 10, " Telemetria de Risco e Potencial", border=1, fill=True, new_x="LMARGIN", new_y="NEXT")
+            pdf.set_font("helvetica", "", 11)
+            pdf.cell(0, 8, f"Risco de Churn: {risco_f:.1f}%", new_x="LMARGIN", new_y="NEXT")
+            pdf.cell(0, 8, f"Potencial de Expansao: {potencial_f:.1f}%", new_x="LMARGIN", new_y="NEXT")
+            pdf.cell(0, 8, f"SLA Medido: {sla_mes}%", new_x="LMARGIN", new_y="NEXT")
+            pdf.cell(0, 8, f"Score NPS: {nps_nota if tem_nps else 'N/A'}", new_x="LMARGIN", new_y="NEXT")
+            pdf.ln(10)
+
+            # Playbook IA
+            pdf.set_font("helvetica", "B", 14)
+            pdf.cell(0, 10, " Playbook Estrategico (30-60-90 Dias)", border=1, fill=True, new_x="LMARGIN", new_y="NEXT")
+            pdf.ln(5)
+            
+            # Formatação do texto da IA (Fallback para caracteres especiais)
+            pdf.set_font("helvetica", "", 11)
+            texto_limpo = analise_ia.encode('latin-1', 'replace').decode('latin-1')
+            pdf.multi_cell(0, 7, texto_limpo)
+
+            # Geração do buffer de memória
+            pdf_bytes = bytes(pdf.output())
+
+            # Botão de Download do Streamlit
+            st.write("---")
+            st.download_button(
+                label="📥 BAIXAR RELATÓRIO EXECUTIVO (PDF)",
+                data=pdf_bytes,
+                file_name=f"RetenAI_Diagnostico_{nome_cliente.replace(' ', '_')}.pdf",
+                mime="application/pdf",
+                type="primary"
+            )
+            
+            # Sincronização Google Sheets
             try:
                 conn = st.connection("gsheets", type=GSheetsConnection)
                 df = conn.read(worksheet="Página1", ttl=0)
@@ -425,6 +486,6 @@ if st.button(f"GERAR DIAGNÓSTICO {NOME_PLATAFORMA.upper()}"):
                     "Playbook IA": analise_ia
                 }])
                 conn.update(worksheet="Página1", data=pd.concat([df, nova_linha], ignore_index=True))
-                st.toast("✅ Telemetria e Playbook sincronizados com sucesso no Data Lake (Sheets).", icon="💾")
+                st.toast("✅ Telemetria e Playbook sincronizados no Data Lake.", icon="💾")
             except Exception as e:
                 st.warning(f"⚠️ Alerta de Sincronização: {e}")
