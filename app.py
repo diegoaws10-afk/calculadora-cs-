@@ -140,11 +140,28 @@ def check_authentication():
     c_esq, c_centro, c_dir = st.columns([1, 1.2, 1])
     with c_centro:
         with st.container(border=True):
-            # LOGO CUSTOMIZADA
-            if os.path.exists("minha_logo.png"): 
-                st.image("minha_logo.png", use_column_width=True)
-            else: 
-                st.markdown(f"<h1 style='text-align: center; color: #ffffff !important; font-size: 3rem;'>{NOME_PLATAFORMA.split('.')[0]}<span style='color: #06b6d4;'>.{NOME_PLATAFORMA.split('.')[1] if '.' in NOME_PLATAFORMA else ''}</span></h1>", unsafe_allow_html=True)
+            
+            # NOVO LOGO EM SVG (VETOR 100% NO CÓDIGO) E TIPOGRAFIA
+            st.markdown("""
+            <div style="display: flex; justify-content: center; align-items: center; flex-direction: column; margin-bottom: 20px;">
+                <svg width="70" height="70" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="gradLogo" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#06b6d4;stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+                    <!-- Hexágono Base (Escudo de Retenção) -->
+                    <path d="M50 5 L90 25 L90 75 L50 95 L10 75 L10 25 Z" fill="rgba(99, 102, 241, 0.05)" stroke="url(#gradLogo)" stroke-width="4" stroke-linejoin="round"/>
+                    <!-- Letra R Abstrata e IA Nodes -->
+                    <path d="M35 35 L35 70 M35 35 C 55 25, 65 40, 50 55 L35 55 M50 55 L65 75" fill="none" stroke="url(#gradLogo)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+                    <!-- Pontos Neurais (IA) -->
+                    <circle cx="35" cy="35" r="5" fill="#06b6d4" />
+                    <circle cx="65" cy="75" r="5" fill="#6366f1" />
+                </svg>
+                <h1 style='text-align: center; color: #ffffff !important; font-size: 2.8rem; margin-top: 10px; margin-bottom: 0px;'>Reten<span style='color: #06b6d4;'>.AI</span></h1>
+            </div>
+            """, unsafe_allow_html=True)
             
             st.markdown("<p style='text-align: center; color: #94a3b8; margin-bottom: 20px;'>Acesso Restrito - Consultoria Estratégica</p>", unsafe_allow_html=True)
             with st.form("login_form"):
@@ -163,9 +180,6 @@ def check_authentication():
                             st.session_state["authenticated"] = True; st.session_state["user_logado"] = u; st.rerun()
                     else: st.error("Acesso Negado.")
     return False
-
-if not check_authentication(): st.stop()
-
 # ==================================================
 # 🧠 CÉREBRO RETEN.AI (PROMPT ENGENHARIA AVANÇADA)
 # ==================================================
